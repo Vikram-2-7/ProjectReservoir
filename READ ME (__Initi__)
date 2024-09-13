@@ -1,0 +1,11 @@
+# initialization 
+
+cd myproject<dictionary>
+
+pip install requests
+
+pip show django # if not install
+
+#static error activate my environment
+
+python manage.py runserver
