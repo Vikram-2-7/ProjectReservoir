@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto p-4">
+    <h1 class="text-3xl font-bold mb-4">Hydro Alert</h1>
+    <form method="post" action="" class="bg-white p-6 rounded-lg shadow-md mb-6">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600">
+            Submit
+        </button>
+    </form>
+
+    {% if result %}
+    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+        <h2 class="text-2xl font-semibold mb-4">Result</h2>
+        <p>{{ result }}</p>
+    </div>
+    {% endif %}
+
+    {% if graph_data %}
+    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+        <h2 class="text-2xl font-semibold mb-4">Water Levels and Alerts</h2>
+        <div id="graph-container"></div>
+        <script>
+            var graphData = {{ graph_data|safe }};
+
+            // Use graphData to render the graph using JavaScript
+            // Example using Plotly.js
+            var trace1 = {
+                x: graphData.date,
+                y: graphData.water_level,
+                mode: 'lines',
+                name: 'Water Level (mcft)',
+                line: {color: 'blue'}
+            };
+
+            var trace2 = {
+                x: graphData.date,
+                y: graphData.high_alert,
+                mode: 'markers',
+                name: 'High Water Alert',
+                marker: {color: 'red', symbol: 'x'}
+            };
+
+            var trace3 = {
+                x: graphData.date,
+                y: graphData.low_alert,
+                mode: 'markers',
+                name: 'Low Water Alert',
+                marker: {color: 'orange', symbol: 'circle'}
+            };
+
+            var data = [trace1, trace2, trace3];
+
+            var layout = {
+                title: 'Water Levels and Alerts (High and Low)',
+                xaxis_title: 'Date',
+                yaxis_title: 'Current Water Level (mcft)',
+                template: 'plotly_dark'
+            };
+
+            Plotly.newPlot('graph-container', data, layout);
+        </script>
+    </div>
+    {% endif %}
+
+    {% if map_div %}
+    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+        <h2 class="text-2xl font-semibold mb-4">Dam Location</h2>
+        {{ map_div|safe }}
+        <script>
+            var mapDiv = document.getElementById('map');
+            var latitude = mapDiv.dataset.latitude;
+            var longitude = mapDiv.dataset.longitude;
+
+            // Use latitude and longitude to initialize the map
+            // Example using Leaflet.js
+            var map = L.map('map').setView([latitude, longitude], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+            }).addTo(map);
+            L.marker([latitude, longitude]).addTo(map)
+                .bindPopup('Dam Location')
+                .openPopup();
+        </script>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,92 @@
+<!-- weather/templates/weather/home.html -->
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - Weather App</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    <!-- Include AOS (Animate On Scroll) library for animations -->
+    <link href="https://cdn.jsdelivr.net/npm/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/aos@2.3.1/dist/aos.js"></script>
+</head>
+<body class="bg-gradient-to-br from-purple-900 to-purple-600 min-h-screen flex flex-col">
+    
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow-md fixed w-full z-10 top-0">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-blue-600 flex items-center space-x-2">
+                <i class="fas fa-cloud-sun text-yellow-400"></i>
+                <span>BrookStream.Ai</span>
+            </h1>
+            <div>
+                <a href="{% url 'home' %}" class="text-gray-600 hover:text-blue-600 px-4 transition duration-300">Home</a>
+                <a href="{% url 'get_weather' %}" class="text-gray-600 hover:text-blue-600 px-4 transition duration-300">Weather</a>
+                <a href="{% url 'dam_control' %}" class="text-gray-600 hover:text-blue-600 px-4 transition duration-300">Dam Control</a>
+                <a href="{% url 'hydroalert' %}" class="text-gray-600 hover:text-blue-600 px-4 transition duration-300">Hydro Alert</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mx-auto p-8 pt-20 flex-grow" data-aos="fade-up">
+        <h1 class="text-5xl font-extrabold text-center text-white mb-12 animate-pulse">
+            Welcome to the BrookStream.Ai
+        </h1>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Weather Feature -->
+            <div class="bg-white rounded-lg shadow-lg p-8 hover:shadow-2xl transition transform hover:scale-105 duration-300" data-aos="fade-right">
+                <h2 class="text-3xl font-semibold text-center text-blue-600">Weather</h2>
+                <p class="text-gray-600 text-center mt-4">Get the latest weather updates for your city.</p>
+                <div class="flex justify-center mt-6">
+                    <a href="{% url 'get_weather' %}" class="bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300">
+                        <i class="fas fa-cloud-sun-rain mr-2"></i> View Weather
+                    </a>
+                </div>
+            </div>
+
+            <!-- Dam Control Feature -->
+            <div class="bg-white rounded-lg shadow-lg p-8 hover:shadow-2xl transition transform hover:scale-105 duration-300" data-aos="fade-up">
+                <h2 class="text-3xl font-semibold text-center text-blue-600">Dam Control Center</h2>
+                <p class="text-gray-600 text-center mt-4">Monitor and manage dam operations effectively.</p>
+                <div class="flex justify-center mt-6">
+                    <a href="{% url 'dam_control' %}" class="bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300">
+                        <i class="fas fa-water mr-2"></i> Access Control Center
+                    </a>
+                </div>
+            </div>
+
+            <!-- Hydro Alert Feature -->
+            <div class="bg-white rounded-lg shadow-lg p-8 hover:shadow-2xl transition transform hover:scale-105 duration-300" data-aos="fade-left">
+                <h2 class="text-3xl font-semibold text-center text-blue-600">Hydro Alert</h2>
+                <p class="text-gray-600 text-center mt-4">Stay informed about flood alerts and water levels.</p>
+                <div class="flex justify-center mt-6">
+                    <a href="{% url 'hydroalert' %}" class="bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300">
+                        <i class="fas fa-exclamation-triangle mr-2"></i> Get Alerts
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white py-6 mt-auto">
+        <div class="container mx-auto text-center text-gray-700">
+            <p class="text-lg">&copy; 2024 Weather App. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Initialize AOS -->
+    <script>
+        AOS.init({
+            duration: 1000,
+            once: true,
+        });
+    </script>
+
+</body>
+</html>

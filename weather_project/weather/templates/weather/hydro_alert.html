@@ -1,0 +1,81 @@
+{% load static %}   
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hydro Alert</title>
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js" integrity="sha512-A7jX1uWmS/LRY3ECdIBhTZTPeH+4Zm3tKfUjA1f5vXUQ5lU1EJSZrLAVwZ94MZz+5+WWsf3W6U5nlH4zZIOMw==" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" integrity="sha512-p0yzkKfpDqF43lY8XtLfOj5Ed8WT+bjDBz+FFJcPRvD8V8jN4U8T+UN61VLF5sHR9jP5Doxu5czdZcEoNs/xQ==" crossorigin="anonymous"/>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans">
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold mb-4">Hydro Alert</h1>
+        <form method="post" action="" class="bg-white p-6 rounded-lg shadow-md mb-6">
+            {% csrf_token %}
+            <label for="dam_name" class="block text-lg font-medium mb-2">Enter Dam/Reservoir Name:</label>
+            <input type="text" id="dam_name" name="dam_name" required
+                   class="block w-full p-2 border border-gray-300 rounded-md mb-4">
+            <button type="submit"
+                    class="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600">
+                Submit
+            </button>
+        </form>
+
+        {% if graph_div %}
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-2xl font-semibold mb-4">Water Level Graph</h2>
+            <div class="w-full" id="graph-container">
+                {{ graph_div|safe }}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if map_div %}
+        <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+            <h2 class="text-2xl font-semibold mb-4">Dam Location</h2>
+            <div class="w-full h-80" id="map">
+                {{ map_div|safe }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+<div class="flex-grow mt-8 lg:mt-0">
+                {% if weather_data %}
+                    <div id="map"></div>
+                    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+                    <script>
+                        var map = L.map('map').setView([{{ weather_data.Latitude }}, {{ weather_data.Longitude }}], 13);
+
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            maxZoom: 19,
+                        }).addTo(map);
+
+                        L.marker([{{ weather_data.Latitude }}, {{ weather_data.Longitude }}]).addTo(map)
+                            .bindPopup('Location: {{ weather_data.City }}')
+                            .openPopup();
+                    </script>
+                {% endif %}
+            </div>
+
+            
+
+
+    <script>
+        // Initialize Leaflet map
+        var map = L.map('map').setView([51.505, -0.09], 13); // Replace with coordinates of the dam
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // Optionally add a marker
+        L.marker([51.5, -0.09]).addTo(map)
+            .bindPopup('Dam/Reservoir Location')
+            .openPopup();
+    </script>
+    
+</body>
+</html>

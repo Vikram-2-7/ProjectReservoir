@@ -1,0 +1,96 @@
+{% extends 'dam/base.html' %}
+
+{% block title %}Dam Control Center{% endblock %}
+
+{% block content %}
+<div class="flex-grow flex items-center justify-center">
+    <!-- Dam Control Form Section -->
+    <div class="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
+        <h1 class="text-3xl font-bold text-center text-gray-800">Dam Control Center</h1>
+        <form method="POST">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="mt-4 w-full bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 transition duration-300">
+                Submit
+            </button>
+        </form>
+
+        <!-- Result Section -->
+        {% if result %}
+            <div class="mt-4 text-center text-gray-700">
+                <h2 class="text-xl">{{ result }}</h2>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Charts Section -->
+<div class="flex-grow flex items-center justify-center mt-8">
+    <div class="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
+        <!-- Prediction Chart -->
+        {% if prediction_data %}
+            <canvas id="predictionChart" width="400" height="200" class="mt-4"></canvas>
+            <script>
+                const predictionData = {{ prediction_data|safe }};
+                const predictionLabels = Object.keys(predictionData);
+                const predictionValues = Object.values(predictionData);
+
+                const predictionCtx = document.getElementById('predictionChart').getContext('2d');
+                const predictionChart = new Chart(predictionCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: predictionLabels,
+                        datasets: [{
+                            label: 'Prediction Counts',
+                            data: predictionValues,
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            </script>
+        {% endif %}
+
+        <!-- Feature Importance Chart -->
+        {% if feature_data %}
+            <canvas id="featureImportanceChart" width="400" height="200" class="mt-4"></canvas>
+            <script>
+                const featureData = {{ feature_data|safe }};
+                const featureLabels = Object.keys(featureData);
+                const featureValues = Object.values(featureData);
+
+                const featureCtx = document.getElementById('featureImportanceChart').getContext('2d');
+                const featureChart = new Chart(featureCtx, {
+                    type: 'bar',  // Set as bar for feature importance
+                    data: {
+                        labels: featureLabels,
+                        datasets: [{
+                            label: 'Feature Importance',
+                            data: featureValues,
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',  // Horizontal bar
+                        scales: {
+                            x: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            </script>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Info</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 500px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-r from-blue-500 to-purple-600 min-h-screen flex flex-col">
+    <nav class="bg-white shadow-md">
+        <div class="container mx-auto px-4 py-2 flex justify-between items-center">
+            <h1 class="text-xl font-bold text-blue-600">Weather & Dam Control App</h1>
+            <div>
+                <a href="{% url 'home' %}" class="text-gray-600 hover:text-blue-600 px-4">Home</a>
+                <a href="{% url 'get_weather' %}" class="text-gray-600 hover:text-blue-600 px-4">Weather</a>
+                <a href="{% url 'dam_control' %}" class="text-gray-600 hover:text-blue-600 px-4">Dam Control</a>
+                <a href="{% url 'hydroalert' %}" class="text-gray-600 hover:text-blue-600 px-4">Hydro Alert</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow p-8">
+        <div class="container mx-auto flex flex-col lg:flex-row lg:items-start">
+            <div class="bg-white rounded-lg shadow-lg p-8 max-w-md lg:max-w-xs lg:mr-8 flex-shrink-0">
+                <h1 class="text-3xl font-bold text-center text-gray-800">Weather Information</h1>
+                <form method="GET" action="" class="mt-4">
+                    <div class="mb-4">
+                        <input type="text" name="city" class="border border-gray-300 rounded-lg p-2 w-full" placeholder="Enter city name" required>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 transition duration-300">Get Weather</button>
+                </form>
+
+                {% if error %}
+                    <div class="mt-4 text-red-500 text-center">{{ error }}</div>
+                {% endif %}
+
+                {% if weather_data %}
+                    <div class="card mt-4 p-4 border border-gray-300 rounded-lg">
+                        <h5 class="text-xl font-semibold">{{ weather_data.City }}</h5>
+                        <p class="text-gray-700">Temperature: {{ weather_data.Temperature }}°C</p>
+                        <p class="text-gray-700">Description: {{ weather_data.Description }}</p>
+                        <p class="text-gray-700">Humidity: {{ weather_data.Humidity }}%</p>
+                        <p class="text-gray-700">Wind Speed: {{ weather_data.Wind_Speed }} km/s</p>
+                    </div>
+                {% endif %}
+
+                {% if chart_data %}
+                    <canvas id="weatherChart" width="400" height="200" class="mt-4"></canvas>
+                    <script>
+                        var ctx = document.getElementById('weatherChart').getContext('2d');
+                        var weatherChart = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: {{ chart_data.labels|safe }},
+                                datasets: [{
+                                    label: 'Weather Data',
+                                    data: {{ chart_data.datasets.0.data|safe }},
+                                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                    borderColor: 'rgba(54, 162, 235, 1)',
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                scales: {
+                                    y: {
+                                        beginAtZero: true
+                                    }
+                                }
+                            }
+                        });
+                    </script>
+                {% endif %}
+            </div>
+
+            <div class="flex-grow mt-8 lg:mt-0">
+                {% if weather_data %}
+                    <div id="map"></div>
+                    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+                    <script>
+                        var map = L.map('map').setView([{{ weather_data.Latitude }}, {{ weather_data.Longitude }}], 13);
+
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            maxZoom: 19,
+                        }).addTo(map);
+
+                        L.marker([{{ weather_data.Latitude }}, {{ weather_data.Longitude }}]).addTo(map)
+                            .bindPopup('Location: {{ weather_data.City }}')
+                            .openPopup();
+                    </script>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-white py-4">
+        <div class="container mx-auto text-center text-gray-600">
+            <p>&copy; 2024 Weather & Dam Control App. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>
