@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Weather App{% endblock %}</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+        html {
+            font-family: 'Inter', sans-serif;
+        }
+        .bg-gradient {
+            background: linear-gradient(to right, #4299E1, #805AD5);
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gradient min-h-screen flex flex-col">
+
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow-md">
+        <div class="container mx-auto px-4 py-2 flex justify-between items-center">
+            <h1 class="text-xl font-bold text-blue-600">Weather App</h1>
+            <div>
+                <a href="{% url 'home' %}" class="text-gray-600 hover:text-blue-600 px-4">Home</a>
+                <a href="{% url 'get_weather' %}" class="text-gray-600 hover:text-blue-600 px-4">Weather</a>
+                <a href="{% url 'dam_control' %}" class="text-gray-600 hover:text-blue-600 px-4">Dam Control</a>
+                <a href="{% url 'hydroalert' %}" class="text-gray-600 hover:text-blue-600 px-4">Hydro Alert</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white py-4">
+        <div class="container mx-auto text-center text-gray-600">
+            <p>&copy; 2024 Weather App. All rights reserved.</p>
+        </div>
+    </footer>
+
+</body>
+</html>
