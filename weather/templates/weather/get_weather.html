@@ -1,0 +1,69 @@
+{% extends 'dam/base.html' %}
+
+{% block title %}🌤️ Weather Information{% endblock %}
+
+{% block content %}
+
+<div class="pt-28 max-w-md mx-auto space-y-8 bg-white bg-opacity-20 backdrop-blur rounded-xl p-8 shadow-lg animate__animated animate__fadeInUp">
+
+    <form method="POST" class="space-y-6">
+        <center><b><h1> REPORT <h1><b><center>
+        {% csrf_token %}
+        <input 
+            type="text"
+            name="city"
+            placeholder="Enter city name"
+            required
+            class="w-full p-3 border border-gray-300 rounded-lg text-black placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
+        >
+        <button type="submit" class="w-full bg-cyan-500 text-white py-3 rounded-xl font-semibold hover:bg-cyan-400 transition">Get Weather</button>
+    </form>
+
+    {% if weather %}
+    <div class="bg-white bg-opacity-20 backdrop-blur rounded-xl p-6 shadow-lg text-gray-900 animate__animated animate__fadeInUp">
+        <h2 class="text-3xl font-semibold mb-6 text-cyan-600">{{ weather.city }}, {{ weather.country|default:"" }}</h2>
+        <div class="flex flex-col space-y-4">
+            <div class="flex items-center space-x-4">
+                <img src="https://openweathermap.org/img/wn/{{ weather.icon }}@2x.png" alt="weather icon" class="w-16 h-16"/>
+                <p class="text-xl font-semibold">{{ weather.description }}</p>
+            </div>
+            <p><strong>Temperature:</strong> {{ weather.temperature }}°C</p>
+            <p><strong>Feels Like:</strong> {{ weather.feels_like }}°C</p>
+            <p><strong>Humidity:</strong> {{ weather.humidity }}%</p>
+            <p><strong>Pressure:</strong> {{ weather.pressure }} hPa</p>
+            <p><strong>Wind Speed:</strong> {{ weather.wind_speed }} m/s</p>
+            <p><strong>Wind Direction:</strong> {{ weather.wind_deg }}°</p>
+            <p><strong>Visibility:</strong> {{ weather.visibility|default:"N/A" }} meters</p>
+            <p><strong>UV Index:</strong> {{ weather.uv_index|default:"N/A" }}</p>
+            <p><strong>Sunrise:</strong> {{ weather.sunrise|date:"H:i" }}</p>
+            <p><strong>Sunset:</strong> {{ weather.sunset|date:"H:i" }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if forecast %}
+    <div class="bg-white bg-opacity-20 backdrop-blur rounded-xl p-6 shadow-lg mt-8 animate__animated animate__fadeInUp">
+        <h3 class="text-xl font-semibold text-cyan-600 mb-4">5-Day Forecast</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-x-auto">
+            {% for day in forecast %}
+            <div class="p-4 bg-white bg-opacity-30 rounded-lg shadow flex flex-col items-center">
+                <p class="font-bold mb-2">{{ day.date|date:"D, M d" }}</p>
+                <img src="https://openweathermap.org/img/wn/{{ day.icon }}@2x.png" alt="forecast icon" class="w-12 h-12">
+                <p>{{ day.description }}</p>
+                <p class="mt-2"><strong>Min:</strong> {{ day.min_temp }}°C</p>
+                <p><strong>Max:</strong> {{ day.max_temp }}°C</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <p class="text-red-500 text-center font-semibold animate__animated animate__fadeInUp">{{ error }}</p>
+    {% endif %}
+
+    {% if result %}
+    <p class="text-green-600 text-center font-semibold animate__animated animate__fadeInUp">{{ result }}</p>
+    {% endif %}
+</div>
+{% endblock %}

@@ -3,31 +3,144 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}My Django App{% endblock %}</title>
+    <title>{% block title %}BrookStream.Ai{% endblock %}</title>
+
+    <!-- TailwindCSS -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- AOS (Animate On Scroll) -->
+    <link href="https://cdn.jsdelivr.net/npm/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/aos@2.3.1/dist/aos.js"></script>
+
+    <style>
+        /* Animated gradient background */
+        body {
+            background: linear-gradient(135deg, #0f172a, #1e3a8a, #0ea5e9);
+            background-size: 300% 300%;
+            animation: gradientShift 8s ease infinite;
+            font-family: 'Poppins', sans-serif;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        /* Frosted glass navbar and footer */
+        .glass-nav, .glass-footer {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+        }
+        .glass-footer {
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        /* Nav links */
+        .nav-link {
+            position: relative;
+            color: rgba(0, 0, 0, 0.8);
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0%;
+            height: 2px;
+            bottom: -3px;
+            left: 0;
+            background-color: #22d3ee;
+            transition: width 0.3s ease;
+        }
+        .nav-link:hover {
+            color: #22d3ee;
+        }
+        .nav-link:hover::after {
+            width: 100%;
+        }
+        /* Footer glow */
+        footer p {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        /* Smooth fade between pages */
+        main {
+            animation: fadeIn 0.7s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Ensure input text always black and visible in all states (autofill/focus) */
+        input.text-black,
+        input.text-black:focus,
+        input.text-black:-webkit-autofill,
+        input.text-black:-webkit-autofill:focus,
+        input.text-black:-webkit-autofill:hover,
+        input.text-black:autofill,
+        input.text-black:autofill:focus {
+            color: #111827 !important; /* Tailwind's black */
+            background-color: #fff !important;
+            -webkit-text-fill-color: #111827 !important;
+            caret-color: #111827 !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+        input::placeholder {
+            color: #6b7280 !important; /* Tailwind's gray-600 */
+            opacity: 1;
+        }
+    </style>
 </head>
-<body class="bg-gradient-to-r from-blue-500 to-purple-600 min-h-screen flex flex-col">
-    <nav class="bg-white shadow-md">
-        <div class="container mx-auto px-4 py-2 flex justify-between items-center">
-            <h1 class="text-xl font-bold text-blue-600">Weather & Dam Control App</h1>
-            <div>
-                <a href="{% url 'home' %}" class="text-gray-600 hover:text-blue-600 px-4">Home</a>
-                <a href="{% url 'get_weather' %}" class="text-gray-600 hover:text-blue-600 px-4">Weather</a>
-                <a href="{% url 'dam_control' %}" class="text-gray-600 hover:text-blue-600 px-4">Dam Control</a>
-                <a href="{% url 'hydroalert' %}" class="text-gray-600 hover:text-blue-600 px-4">Hydro Alert</a>
+
+<body class="min-h-screen flex flex-col text-white overflow-x-hidden">
+
+    <!-- Navbar -->
+    <nav class="glass-nav fixed w-full top-0 left-0 z-50 shadow-md animate__animated animate__fadeInDown">
+        <div class="container mx-auto flex justify-between items-center py-4 px-8">
+            <h1 class="text-2xl font-bold text-cyan-300 tracking-wide flex items-center gap-2">
+                🌊 BrookStream.Ai
+            </h1>
+            <div class="flex space-x-6 text-sm md:text-base">
+                <a href="{% url 'home' %}" class="nav-link">Home</a>
+                <a href="{% url 'get_weather' %}" class="nav-link">Weather</a>
+                <a href="{% url 'dam_control' %}" class="nav-link">Dam Control</a>
+                <a href="{% url 'hydroalert' %}" class="nav-link">Hydro Alert</a>
             </div>
         </div>
     </nav>
 
-    <main class="flex-grow">
-        {% block content %}{% endblock %}
+    <!-- Main Content -->
+    <main class="flex-grow pt-24 pb-12 container mx-auto px-4" data-aos="fade-up">
+        {% block content %}
+            <!-- Example form to show input style -->
+            <form method="post" class="max-w-md mx-auto mb-12 bg-white bg-opacity-20 backdrop-blur rounded-xl p-8 shadow-lg">
+                {% csrf_token %}
+                <input 
+                    type="text"
+                    name="city"
+                    placeholder="Enter city name"
+                    required
+                    class="mt-2 mb-4 w-full p-3 border border-gray-300 rounded-lg text-black bg-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
+                >
+                <button type="submit" class="w-full bg-cyan-500 text-white py-2 rounded-lg font-semibold hover:bg-cyan-400 transition">Get Weather</button>
+            </form>
+        {% endblock %}
     </main>
 
-    <footer class="bg-white py-4">
-        <div class="container mx-auto text-center text-gray-600">
-            <p>&copy; 2024 Weather & Dam Control App. All rights reserved.</p>
-        </div>
+    <!-- Footer -->
+    <footer class="glass-footer py-6 text-center animate__animated animate__fadeInUp">
+        <p class="text-sm md:text-base">
+            © 2025 <span class="text-cyan-300 font-semibold">BrookStream.Ai</span> — Intelligent Hydro Management System
+        </p>
     </footer>
+
+    <script>
+        AOS.init({ duration: 1000, once: true });
+    </script>
 </body>
 </html>

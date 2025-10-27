@@ -1,96 +1,292 @@
 {% extends 'dam/base.html' %}
 
-{% block title %}Dam Control Center{% endblock %}
+{% block title %}⚙️ Dam Control Center{% endblock %}
 
 {% block content %}
-<div class="flex-grow flex items-center justify-center">
-    <!-- Dam Control Form Section -->
-    <div class="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
-        <h1 class="text-3xl font-bold text-center text-gray-800">Dam Control Center</h1>
-        <form method="POST">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit" class="mt-4 w-full bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 transition duration-300">
-                Submit
-            </button>
-        </form>
+<div class="min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e3a8a] to-[#0ea5e9] flex flex-col items-center justify-center py-12 px-4 overflow-x-hidden">
 
-        <!-- Result Section -->
-        {% if result %}
-            <div class="mt-4 text-center text-gray-700">
-                <h2 class="text-xl">{{ result }}</h2>
+    <div class="glass-panel w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 items-start animate__animated animate__fadeIn">
+
+        <!-- Left Section -->
+        <div class="glass-box p-8 rounded-2xl shadow-lg backdrop-blur-xl border border-white/30 text-gray-100 transition-transform duration-500 hover:-translate-y-1 hover:shadow-2xl">
+
+            <h1 class="text-3xl font-bold text-center mb-6 text-cyan-300 drop-shadow-md">⚙️ Dam Control Center</h1>
+
+            <div id="computationStatus" class="glass-subbox p-4 rounded-lg mb-6 font-semibold text-center text-cyan-300">
+                Status: <span id="statusText">Idle</span>
+                <div class="w-full bg-gray-700 rounded-full h-4 mt-2 overflow-hidden">
+                    <div id="progressBar" class="bg-cyan-400 h-4 w-0 transition-all duration-500"></div>
+                </div>
             </div>
-        {% endif %}
+
+            <form method="POST" id="computationForm" class="space-y-4 animate__animated animate__fadeInUp">
+                {% csrf_token %}
+                {{ form.as_p }}
+
+                <div class="flex space-x-4">
+                    <button type="submit" class="flex-grow py-3 rounded-xl font-semibold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 transition-all duration-300 shadow-lg hover:shadow-cyan-400/40">
+                        🚀 Run Computation
+                    </button>
+
+                    <button type="submit" name="reset" value="1" id="resetButton" class="flex-grow py-3 rounded-xl font-semibold bg-gray-500 hover:bg-gray-600 text-white transition-all duration-300 shadow-lg">
+                        🔄 Reset
+                    </button>
+                </div>
+            </form>
+
+            {% if result %}
+            <div class="mt-6 space-y-6 animate__animated animate__fadeInUp">
+                <div class="text-center text-cyan-200 font-medium text-lg">{{ result }}</div>
+
+                {% if weather_data %}
+                <div class="glass-subbox p-4 rounded-lg">
+                    <h3 class="text-xl font-semibold text-cyan-300 mb-2">🌦️ Weather Data Used</h3>
+                    <p class="text-gray-200">🌆 City: <span class="font-semibold text-black">{{ weather_data.city }}</span></p>
+                    <p class="text-gray-200">🌡️ Temp: <span class="text-black">{{ weather_data.temperature }}°C</span></p>
+                    <p class="text-gray-200">💧 Humidity: <span class="text-black">{{ weather_data.humidity }}%</span></p>
+                    <p class="text-gray-200">🌬️ Wind: <span class="text-black">{{ weather_data.wind_speed }} km/s</span></p>
+                </div>
+                {% endif %}
+
+                {% if confusion_data %}
+                <div class="glass-subbox p-4 rounded-lg">
+                    <h3 class="text-lg font-semibold text-cyan-300">Confusion Matrix & Metrics</h3>
+                    <p class="text-gray-200">🎯 Accuracy: <span class="font-bold text-white">{{ confusion_data.accuracy }}</span></p>
+                    <p class="text-gray-200">TP: {{ confusion_data.TP }} | FN: {{ confusion_data.FN }} | FP: {{ confusion_data.FP }} | TN: {{ confusion_data.TN }}</p>
+                </div>
+                {% endif %}
+
+                {% if regression_metrics %}
+                <div class="glass-subbox p-4 rounded-lg">
+                    <h3 class="text-lg font-semibold text-cyan-300">📈 Regression Metrics</h3>
+                    <p class="text-gray-200">R²: <span class="text-white">{{ regression_metrics.r2 }}</span></p>
+                    <p class="text-gray-200">MAE: <span class="text-white">{{ regression_metrics.mae }}</span></p>
+                    <p class="text-gray-200">RMSE: <span class="text-white">{{ regression_metrics.rmse }}</span></p>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Section -->
+        <div class="glass-box p-8 rounded-2xl shadow-lg backdrop-blur-xl border border-white/30 text-gray-100 transition-transform duration-500 hover:-translate-y-1 hover:shadow-2xl">
+            <h2 class="text-2xl font-semibold text-cyan-300 text-center mb-4 drop-shadow-md">📊 Model Insights</h2>
+
+            <!-- Prediction Counts Chart -->
+            {% if prediction_data %}
+            <div class="animate__animated animate__fadeInUp mb-6">
+                <canvas id="predictionChart" class="w-full h-80"></canvas>
+            </div>
+            {% else %}
+            <div class="text-center text-gray-300 p-8">
+                <p>📊 Run computation to see prediction insights</p>
+            </div>
+            {% endif %}
+
+            <!-- Feature Importance Chart -->
+            {% if feature_data %}
+            <div class="animate__animated animate__fadeInUp">
+                <canvas id="featureImportanceChart" class="w-full h-72"></canvas>
+            </div>
+            {% else %}
+            <div class="text-center text-gray-300 p-8">
+                <p>📈 Run computation to see feature importance</p>
+            </div>
+            {% endif %}
+        </div>
     </div>
 </div>
 
-<!-- Charts Section -->
-<div class="flex-grow flex items-center justify-center mt-8">
-    <div class="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
-        <!-- Prediction Chart -->
-        {% if prediction_data %}
-            <canvas id="predictionChart" width="400" height="200" class="mt-4"></canvas>
-            <script>
-                const predictionData = {{ prediction_data|safe }};
-                const predictionLabels = Object.keys(predictionData);
-                const predictionValues = Object.values(predictionData);
+<style>
+.glass-panel {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(12px);
+}
+.glass-box {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(12px);
+    border-radius: 2rem;
+    box-shadow: 0 0 25px rgba(255, 255, 255, 0.15);
+    padding: 2rem;
+}
+.glass-subbox {
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    margin-top: 1rem;
+    padding: 1rem;
+}
+</style>
 
-                const predictionCtx = document.getElementById('predictionChart').getContext('2d');
-                const predictionChart = new Chart(predictionCtx, {
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Wait for DOM to be fully loaded
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        // Form submission handler for progress bar
+        const form = document.getElementById('computationForm');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                // Only show progress for computation, not reset
+                if (!e.submitter || e.submitter.name !== 'reset') {
+                    simulateProgress();
+                }
+            });
+        }
+
+        // Reset button handler
+        const resetButton = document.getElementById('resetButton');
+        if (resetButton) {
+            resetButton.addEventListener('click', function(e) {
+                // Let the form submit naturally, but clear local state
+                const statusText = document.getElementById('statusText');
+                const progressBar = document.getElementById('progressBar');
+                if (statusText) statusText.textContent = "Resetting...";
+                if (progressBar) progressBar.style.width = '0%';
+            });
+        }
+
+        // Progress bar simulation
+        function simulateProgress() {
+            let width = 0;
+            const progressBar = document.getElementById('progressBar');
+            const statusText = document.getElementById('statusText');
+            
+            if (!progressBar || !statusText) return;
+            
+            statusText.textContent = "Running Computation...";
+            
+            const interval = setInterval(() => {
+                if (width >= 100) {
+                    clearInterval(interval);
+                    statusText.textContent = "Computation Complete";
+                } else {
+                    width += 5;
+                    progressBar.style.width = width + '%';
+                }
+            }, 200);
+        }
+
+        // Render Prediction Counts Bar Chart
+        {% if prediction_data %}
+        try {
+            const predictionData = {{ prediction_data|safe }};
+            const ctxPred = document.getElementById('predictionChart');
+            
+            if (ctxPred && predictionData) {
+                const predLabels = Object.keys(predictionData);
+                const predValues = Object.values(predictionData);
+                
+                new Chart(ctxPred, {
                     type: 'bar',
                     data: {
-                        labels: predictionLabels,
+                        labels: predLabels,
                         datasets: [{
                             label: 'Prediction Counts',
-                            data: predictionValues,
-                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                            borderColor: 'rgba(54, 162, 235, 1)',
-                            borderWidth: 1
+                            data: predValues,
+                            backgroundColor: 'rgba(6, 182, 212, 0.5)',
+                            borderColor: 'rgba(6, 182, 212, 1)',
+                            borderWidth: 1,
+                            borderRadius: 6
                         }]
                     },
                     options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 1500 },
                         scales: {
-                            y: {
-                                beginAtZero: true
+                            y: { 
+                                beginAtZero: true, 
+                                ticks: { color: 'white' },
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                            },
+                            x: { 
+                                ticks: { color: 'white' },
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' }
                             }
+                        },
+                        plugins: {
+                            legend: { labels: { color: 'white' } }
                         }
                     }
                 });
-            </script>
+            }
+        } catch (error) {
+            console.error('Error rendering prediction chart:', error);
+            console.log('Prediction data:', {{ prediction_data|safe }});
+        }
         {% endif %}
 
-        <!-- Feature Importance Chart -->
+        // Render Feature Importance Bar Chart
         {% if feature_data %}
-            <canvas id="featureImportanceChart" width="400" height="200" class="mt-4"></canvas>
-            <script>
-                const featureData = {{ feature_data|safe }};
-                const featureLabels = Object.keys(featureData);
-                const featureValues = Object.values(featureData);
+        try {
+            const featureData = {{ feature_data|safe }};
+            const ctxFeat = document.getElementById('featureImportanceChart');
+            
+            if (ctxFeat && featureData) {
+                const featLabels = Object.keys(featureData);
+                const featValues = Object.values(featureData);
+                const total = featValues.reduce((a, b) => a + b, 0);
+                const percentages = featValues.map(v => ((v / total) * 100).toFixed(1));
 
-                const featureCtx = document.getElementById('featureImportanceChart').getContext('2d');
-                const featureChart = new Chart(featureCtx, {
-                    type: 'bar',  // Set as bar for feature importance
+                // Generate gradient colors based on importance
+                const gradientColors = percentages.map(pct => 
+                    `rgba(14, 165, 233, ${0.4 + 0.6 * (pct / 100)})`
+                );
+
+                new Chart(ctxFeat, {
+                    type: 'bar',
                     data: {
-                        labels: featureLabels,
+                        labels: featLabels,
                         datasets: [{
-                            label: 'Feature Importance',
-                            data: featureValues,
-                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                            borderColor: 'rgba(75, 192, 192, 1)',
-                            borderWidth: 1
+                            label: 'Feature Importance (%)',
+                            data: percentages,
+                            backgroundColor: gradientColors,
+                            borderColor: '#0ea5e9',
+                            borderWidth: 1,
+                            borderRadius: 6
                         }]
                     },
                     options: {
-                        indexAxis: 'y',  // Horizontal bar
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: { duration: 1500 },
+                        indexAxis: 'y',
                         scales: {
                             x: {
-                                beginAtZero: true
+                                beginAtZero: true,
+                                max: 100,
+                                ticks: {
+                                    color: 'white',
+                                    callback: val => val + '%'
+                                },
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                            },
+                            y: { 
+                                ticks: { color: 'white' },
+                                grid: { color: 'rgba(255, 255, 255, 0.1)' }
                             }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: context => `${context.dataset.label}: ${context.parsed.x}%`
+                                }
+                            },
+                            legend: { labels: { color: 'white' } }
                         }
                     }
                 });
-            </script>
+            }
+        } catch (error) {
+            console.error('Error rendering feature chart:', error);
+            console.log('Feature data:', {{ feature_data|safe }});
+        }
         {% endif %}
-    </div>
-</div>
+    });
+</script>
+
+<!-- Animate.css -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
 {% endblock %}

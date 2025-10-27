@@ -1,6 +1,4 @@
 from django.shortcuts import render
-from .forms import HydroAlertForm
-from .utils import fetch_dam_data
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
@@ -8,155 +6,106 @@ from sklearn.metrics import accuracy_score
 import plotly.graph_objs as go
 import plotly.io as pio
 
+
 def hydroalert(request):
     result = None
     graph_div = None
-    map_div = None
-    graph_data = None  # Initialize graph_data for rendering the graph
+    alerts = []
 
-    if request.method == 'POST':
-        form = HydroAlertForm(request.POST)
-        if form.is_valid():
-            dam_name = form.cleaned_data['dam_name']
+    dam_name = "Hubei/Chongqing,China"
+    high_rainfall_threshold = 50
+    high_inflow_threshold = 200
+    low_water_level_threshold = 600
+    low_inflow_threshold = 50
 
-            try:
-                # Fetch dam data from utility function
-                df_main, df_rainfall = fetch_dam_data(dam_name)
+    try:
+        df = pd.read_csv(r"C:\Users\VIKRAM\OneDrive\Desktop\DESKTOPP (1)\SIH\weather_app\myproject\weather_project\dam\\threegorges-water-storage.csv")
 
-                # Merge main and rainfall datasets
-                df = pd.merge(df_main, df_rainfall, on='Date')
+        # Check required columns
+        if 'measurement_date' not in df.columns or 'upstream_water_level' not in df.columns:
+            raise ValueError("Dataset must contain 'measurement_date' and 'upstream_water_level' columns.")
 
-                # Success criteria
-                df['Success'] = df['Current Water Level (mcft)'].diff().fillna(0) > 0
-                df['Success'] = df['Success'].astype(int)
+        # Rename columns
+        df.rename(columns={
+            'measurement_date': 'Date',
+            'upstream_water_level': 'Current Water Level (mcft)',
+        }, inplace=True)
 
-                # Calculate features for model input
-                df['Total Rainfall Last 3 Days'] = df['Rainfall Amount (mm)'].rolling(window=3).sum().fillna(0)
-                df['Average Rainfall Last 3 Days'] = df['Rainfall Amount (mm)'].rolling(window=3).mean().fillna(0)
+        # Add placeholder rainfall data if none exists
+        if 'Rainfall Amount (mm)' not in df.columns:
+            df['Rainfall Amount (mm)'] = 0
 
-                # Features and labels
-                features = ['Rainy Season Indicator', 'Inflow (cubic feet/sec)', 'Outflow (cubic feet/sec)',
-                            'Water Flow (cubic feet/sec)', 'Total Rainfall Last 3 Days', 'Average Rainfall Last 3 Days']
-                X = df[features]
-                y = df['Success']
+        # Define success column
+        df['Success'] = df['Current Water Level (mcft)'].diff().fillna(0) > 0
+        df['Success'] = df['Success'].astype(int)
 
-                # Train-test split
-                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+        # Rolling rainfall features
+        df['Total Rainfall Last 3 Days'] = df['Rainfall Amount (mm)'].rolling(window=3).sum().fillna(0)
+        df['Average Rainfall Last 3 Days'] = df['Rainfall Amount (mm)'].rolling(window=3).mean().fillna(0)
 
-                # Model training
-                model = RandomForestClassifier(n_estimators=200, max_depth=5, min_samples_split=5, random_state=42)
-                model.fit(X_train, y_train)
-                y_pred = model.predict(X_test)
+        # Define required features, add missing columns as zero-filled
+        required_features = [
+            'Rainy Season Indicator', 'Inflow (cubic feet/sec)', 'Outflow (cubic feet/sec)',
+            'Water Flow (cubic feet/sec)', 'Total Rainfall Last 3 Days', 'Average Rainfall Last 3 Days'
+        ]
+        for feature in required_features:
+            if feature not in df.columns:
+                df[feature] = 0
 
-                # Model accuracy
-                accuracy = accuracy_score(y_test, y_pred)
-                print(f"Accuracy: {accuracy:.2f}")
+        X = df[required_features]
+        y = df['Success']
 
-                # Check for critical situations
-                df['Alert'] = df.apply(check_critical_situation, axis=1)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+        model = RandomForestClassifier(n_estimators=200, max_depth=5, min_samples_split=5, random_state=42)
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
 
-                # Separate alerts
-                df_alerts_high = df[df['Alert'] == "ALERT: High water level detected!"]
-                df_alerts_low = df[df['Alert'] == "ALERT: Low water level detected!"]
+        accuracy = accuracy_score(y_test, y_pred)
+        print(f"Accuracy: {accuracy:.2f}")  # Log to console
 
-                # Prepare graph data
-                graph_data = {
-                    'date': df['Date'].tolist(),
-                    'water_level': df['Current Water Level (mcft)'].tolist(),
-                    'high_alert_dates': df_alerts_high['Date'].tolist(),
-                    'low_alert_dates': df_alerts_low['Date'].tolist(),
-                    'high_alert_levels': df_alerts_high['Current Water Level (mcft)'].tolist(),
-                    'low_alert_levels': df_alerts_low['Current Water Level (mcft)'].tolist(),
-                }
+        # Alert detection using helper
+        df['Alert'] = df.apply(lambda row: check_critical_situation(
+            row,
+            high_rainfall_threshold,
+            high_inflow_threshold,
+            low_water_level_threshold,
+            low_inflow_threshold,
+        ), axis=1)
+        alerts = df['Alert'].unique().tolist()
 
-                # Prepare Plotly graph
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(x=graph_data['date'], y=graph_data['water_level'], mode='lines+markers', name='Water Level'))
-                fig.add_trace(go.Scatter(x=graph_data['high_alert_dates'], y=graph_data['high_alert_levels'], mode='markers', name='High Alert', marker=dict(color='red')))
-                fig.add_trace(go.Scatter(x=graph_data['low_alert_dates'], y=graph_data['low_alert_levels'], mode='markers', name='Low Alert', marker=dict(color='blue')))
-                graph_div = pio.to_html(fig, full_html=False)
+        # Prepare Plotly graph
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=df['Date'], y=df['Current Water Level (mcft)'], mode='lines+markers', name='Water Level'
+        ))
+        # High alerts marked red
+        fig.add_trace(go.Scatter(
+            x=df[df['Alert'] == "ALERT: High water level detected!"]['Date'],
+            y=df[df['Alert'] == "ALERT: High water level detected!"]['Current Water Level (mcft)'],
+            mode='markers', name='High Alert', marker=dict(color='red')
+        ))
+        # Low alerts marked blue
+        fig.add_trace(go.Scatter(
+            x=df[df['Alert'] == "ALERT: Low water level detected!"]['Date'],
+            y=df[df['Alert'] == "ALERT: Low water level detected!"]['Current Water Level (mcft)'],
+            mode='markers', name='Low Alert', marker=dict(color='blue')
+        ))
+        graph_div = pio.to_html(fig, full_html=False)
 
-                # Render map (assumes latitude and longitude are available in the dataset)
-                latitude = df_main['Latitude'].iloc[0]
-                longitude = df_main['Longitude'].iloc[0]
-                map_div = f'''
-                <div id="map" style="height: 400px;" data-latitude="{latitude}" data-longitude="{longitude}"></div>
-                <script>
-                    var map = L.map('map').setView([{latitude}, {longitude}], 13);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {{
-                        maxZoom: 19,
-                    }}).addTo(map);
-                    L.marker([{latitude}, {longitude}]).addTo(map)
-                        .bindPopup('Location: {dam_name}')
-                        .openPopup();
-                </script>
-                '''
-
-                result = f"Data for {dam_name} has been retrieved successfully."
-            except Exception as e:
-                result = f"Error fetching data for {dam_name}: {str(e)}"
-    else:
-        form = HydroAlertForm()
+        result = f"Data for {dam_name} has been retrieved successfully."
+    except Exception as e:
+        result = f"Error fetching data for {dam_name}: {str(e)}"
 
     return render(request, 'hydroalert/hydroalert.html', {
-        'form': form,
         'result': result,
-        'graph_div': graph_div,  # Pass graph data to template
-        'map_div': map_div,      # Pass map div to template
+        'graph_div': graph_div,
+        'alerts': alerts,
     })
 
-def check_critical_situation(row):
-    # High water level alert criteria
-    if row['Total Rainfall Last 3 Days'] > 50 or row['Inflow (cubic feet/sec)'] > 200:
+
+def check_critical_situation(row, high_rainfall_threshold, high_inflow_threshold, low_water_level_threshold, low_inflow_threshold):
+    if row['Total Rainfall Last 3 Days'] > high_rainfall_threshold or row['Inflow (cubic feet/sec)'] > high_inflow_threshold:
         return "ALERT: High water level detected!"
-    # Low water level alert criteria
-    elif row['Current Water Level (mcft)'] < 600 or row['Inflow (cubic feet/sec)'] < 50:
+    elif row['Current Water Level (mcft)'] < low_water_level_threshold or row['Inflow (cubic feet/sec)'] < low_inflow_threshold:
         return "ALERT: Low water level detected!"
     return "Normal"
-
-def fetch_critical_data(request):
-    result = None
-
-    if request.method == 'POST':
-        form = HydroAlertForm(request.POST)
-        if form.is_valid():
-            dam_name = form.cleaned_data['dam_name']
-            try:
-                df_main, df_rainfall = fetch_dam_data(dam_name)
-                result = f"Data for {dam_name} has been retrieved."
-            except Exception as e:
-                result = f"Error: {str(e)}"
-    else:
-        form = HydroAlertForm()
-
-    return render(request, 'hydroalert/fetch_critical_data.html', {
-        'form': form,
-        'result': result
-    })
-
-def fetch_dam_location(request):
-    result = None
-    map_div = None
-
-    if request.method == 'POST':
-        form = HydroAlertForm(request.POST)
-        if form.is_valid():
-            dam_name = form.cleaned_data['dam_name']
-            try:
-                # Assuming `fetch_dam_data` returns the location data for the dam
-                df_main, df_rainfall = fetch_dam_data(dam_name)
-                
-                # Prepare the map_div for the location
-                map_div = f'<div id="map" data-latitude="{df_main["Latitude"][0]}" data-longitude="{df_main["Longitude"][0]}"></div>'
-                
-                result = f"Location data for {dam_name} has been retrieved."
-            except Exception as e:
-                result = f"Error: {str(e)}"
-    else:
-        form = HydroAlertForm()
-
-    return render(request, 'hydroalert/fetch_dam_location.html', {
-        'form': form,
-        'result': result,
-        'map_div': map_div,
-    })

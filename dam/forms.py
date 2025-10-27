@@ -1,10 +1,13 @@
 # dam/forms.py
 from django import forms
 
-class DamDataForm(forms.Form):
-    inflow = forms.FloatField(label='Inflow (cubic feet/sec)', required=True)
-    outflow = forms.FloatField(label='Outflow (cubic feet/sec)', required=True)
-    water_flow = forms.FloatField(label='Water Flow (cubic feet/sec)', required=True)
-    city = forms.CharField(label='City', required=True)
-    start_date = forms.DateField(label='Start Date (YYYY-MM-DD)', required=True)
-    end_date = forms.DateField(label='End Date (YYYY-MM-DD)', required=True)
+class DamPredictForm(forms.Form):
+    name = forms.CharField(
+        required=True,
+        label="Reservoir / Dam / City",
+        widget=forms.TextInput(attrs={"placeholder": "Enter reservoir/dam/city name", "class":"w-full p-2 border rounded"})
+    )
+    temperature = forms.FloatField(required=False, label="Temperature (°C)")
+    humidity = forms.FloatField(required=False, label="Humidity (%)")
+    wind_speed = forms.FloatField(required=False, label="Wind Speed (km/h)")
+    rainfall = forms.FloatField(required=False, label="Rainfall (mm)")
