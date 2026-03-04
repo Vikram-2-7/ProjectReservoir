@@ -10,21 +10,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import io
 import base64
-
-# Home page
 def home(request):
     return render(request, 'weather/home.html')
-
-# Weather info page (future extensibility)
 def weather_info(request):
     return render(request, 'weather/weather_info.html')
-
-# Enhanced weather fetcher and UI logic
 def get_weather(request):
     weather_data = None
     error_message = None
     forecast_data = None
-
     if request.method == "POST":
         city = request.POST.get("city")
         api_key_path = r"C:\Users\VIKRAM\OneDrive\Desktop\DESKTOPP (1)\SIH\weather_app\myproject\weather_factorAPI_KEY.txt"
@@ -54,11 +47,11 @@ def get_weather(request):
                         "description": weather["weather"][0]["description"].title(),
                         "icon": weather["weather"][0]["icon"],
                         "visibility": weather.get("visibility", "N/A"),
-                        "uv_index": "N/A",  # Placeholder, extendable
+                        "uv_index": "N/A",  
                         "sunrise": weather.get("sys", {}).get("sunrise", "N/A"),
                         "sunset": weather.get("sys", {}).get("sunset", "N/A"),
                     }
-                    # Build forecast (5 day)
+                   
                     forecast_data = []
                     if forecast.get("list", None):
                         used_dates = set()
@@ -87,12 +80,10 @@ def get_weather(request):
         "forecast": forecast_data,
         "error": error_message,
     })
-
 def dam_control(request):
     weather_data = request.session.get('weather_data', None)
     context = {'weather': weather_data}
-
-    # RESET logic: allows user to clear data with a button
+#rest
     if request.method == "POST" and "reset" in request.POST:
         request.session.pop("weather_data", None)
         context = {

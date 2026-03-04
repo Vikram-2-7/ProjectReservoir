@@ -1,0 +1,196 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" /><br><br><br>
+    <title>Hydro Alert</title>
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f172a, #1e3a8a, #0ea5e9);
+            background-size: 300% 300%;
+            animation: gradientShift 8s ease infinite;
+            font-family: 'Poppins', sans-serif;
+            color: #e0e7ff;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding-top: 3rem;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            padding-bottom: 3rem;
+        }
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .glass-box {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 1.5rem;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            max-width: 700px;
+            width: 100%;
+        }
+        h1, h2 {
+            color: #38bdf8;
+            text-shadow: 0 0 8px rgba(14, 165, 233, 0.7);
+        }
+        label {
+            font-weight: 600;
+            color: #3b82f6; /* Tailwind blue-500 */
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 1rem;
+            border: 1px solid #93c5fd; /* Tailwind blue-300 */
+            outline: none;
+            margin-bottom: 1rem;
+            color: #111827; /* Tailwind black */
+            background-color: #f9fafb; /* Tailwind gray-50 */
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.1);
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        input[type="text"]:focus,
+        input[type="number"]:focus {
+            border-color: #3b82f6; /* Tailwind blue-500 */
+            box-shadow: 0 0 8px #22d3ee;
+        }
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 1rem;
+            background: linear-gradient(to right, #06b6d4, #3b82f6);
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 8px 20px rgba(6, 182, 212, 0.5);
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s ease, box-shadow 0.3s ease;
+        }
+        button:hover {
+            background: linear-gradient(to right, #0ea5e9, #2563eb);
+            box-shadow: 0 10px 25px rgba(6, 182, 212, 0.7);
+        }
+        #map {
+            height: 320px;
+            border-radius: 1.5rem;
+            border: 1px solid rgba(255,255,255,0.25);
+            box-shadow: 0 0 25px rgba(255, 255, 255, 0.15);
+            margin-top: 1rem;
+            width: 100%;
+        }
+         .glass-nav, .glass-footer {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+        }
+        .glass-footer {
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        /* Nav links */
+        .nav-link {
+            position: relative;
+            color: rgba(0, 0, 0, 0.8);
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0%;
+            height: 2px;
+            bottom: -3px;
+            left: 0;
+            background-color: #22d3ee;
+            transition: width 0.3s ease;
+        }
+        .nav-link:hover {
+            color: #22d3ee;
+        }
+        .nav-link:hover::after {
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col text-white overflow-x-hidden">
+
+    <!-- Navbar -->
+    <nav class="glass-nav fixed w-full top-0 left-0 z-50 shadow-md animate__animated animate__fadeInDown">
+        <div class="container mx-auto flex justify-between items-center py-4 px-8">
+            <h1 class="text-2xl font-bold text-cyan-300 tracking-wide flex items-center gap-2">
+                🌊 BrookStream.Ai
+            </h1>
+            <div class="flex space-x-6 text-sm md:text-base">
+                <a href="{% url 'home' %}" class="nav-link">Home</a>
+                <a href="{% url 'get_weather' %}" class="nav-link">Weather</a>
+                <a href="{% url 'dam_control' %}" class="nav-link">Dam Control</a>
+                <a href="{% url 'hydroalert' %}" class="nav-link">Hydro Alert</a>
+            </div>
+        </div>
+    </nav>
+
+    <h1 class="text-3xl font-bold mb-6 animate__animated animate__fadeInDown">Hydro Alert - Three-Gorges Reservior CHINA</h1>
+
+    <form method="post" action="" class="glass-box animate__animated animate__fadeInUp">
+        {% csrf_token %}
+        <label for="dam_name">Enter Dam/Reservoir Name:</label>
+        <input type="text" id="dam_name" name="dam_name" required autocomplete="off" placeholder = "Three Gorges"/>
+
+        <label for="high_rainfall_threshold">High Rainfall Threshold (mm):</label>
+        <input type="number" id="high_rainfall_threshold" name="high_rainfall_threshold" value="50" required />
+
+        <label for="high_inflow_threshold">High Inflow Threshold (cubic feet/sec):</label>
+        <input type="number" id="high_inflow_threshold" name="high_inflow_threshold" value="200" required />
+
+        <label for="low_water_level_threshold">Low Water Level Threshold (mcft):</label>
+        <input type="number" id="low_water_level_threshold" name="low_water_level_threshold" value="600" required />
+
+        <label for="low_inflow_threshold">Low Inflow Threshold (cubic feet/sec):</label>
+        <input type="number" id="low_inflow_threshold" name="low_inflow_threshold" value="50" required />
+
+        <button type="submit">Submit</button>
+    </form>
+
+    {% if result %}
+    <div class="glass-box animate__animated animate__fadeInUp">
+        <h2 class="text-2xl font-semibold mb-4">Result</h2>
+        <p>{{ result }}</p>
+    </div>
+    {% endif %}
+
+    {% if graph_div %}
+    <div class="glass-box animate__animated animate__fadeInUp">
+        <h2 class="text-2xl font-semibold mb-4">Water Level Graph</h2>
+        <div id="graph-container">{{ graph_div|safe }}</div>
+    </div>
+    {% endif %}
+
+    {% if map_div %}
+    <div class="glass-box animate__animated animate__fadeInUp">
+        <h2 class="text-2xl font-semibold mb-4">Dam Location</h2>
+        <div id="map">{{ map_div|safe }}</div>
+    </div>
+    {% endif %}
+
+</body>
+</html>
