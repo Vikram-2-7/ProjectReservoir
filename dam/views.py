@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, confusion_matrix, r2_score, mean_absolute_error, mean_squared_error
+from sklearn.metrics import accuracy_score, confusion_matrix, r2_score, mean_absolute_error, mean_squared_error, root_mean_squared_error
 import plotly.graph_objs as go
 import plotly.io as pio
 import time
@@ -65,8 +65,6 @@ def dam_control(request):
     Runs ML model on dam & weather data, computes metrics, feature importance,
     renders results including dynamic charts.
     """
-
-    # Reset functionality: if "reset" button pressed clear session and reset context
     if request.method == "POST" and "reset" in request.POST:
         request.session.pop("weather_data", None)
         return render(request, "dam/dam_control.html", {
@@ -92,87 +90,140 @@ def dam_control(request):
     regression_metrics = None
     prediction_data = None
     feature_data = None
+    feature_names_json = None
+    feature_importances_json = None
+    prediction_details = None
 
-    csv_file_path = r"C:\Users\VIKRAM\OneDrive\Desktop\DESKTOPP (1)\SIH\weather_app\myproject\weather_project\dam\threegorges-water-storage.csv"
+    dam_name = "mettur" # safe default
+    if weather_data and "dam_id" in weather_data:
+        dam_name = weather_data["dam_id"]
+        
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    csv_file_path = os.path.join(base_dir, 'dam', 'data', 'dams', f"{dam_name}.csv")
 
-    # Only run computation when form is submitted (POST request without reset)
     if request.method == "POST" and "reset" not in request.POST:
         try:
+            from sklearn.ensemble import RandomForestRegressor
             df = pd.read_csv(csv_file_path).fillna(0)
 
-            if weather_data:
-                df["temperature"] = weather_data.get("temperature", 0)
-                df["humidity"] = weather_data.get("humidity", 0)
-                df["wind_speed"] = weather_data.get("wind_speed", 0)
-            else:
-                df["temperature"] = 0
-                df["humidity"] = 0
-                df["wind_speed"] = 0
-
-            df["Success"] = df["upstream_water_level"].diff().fillna(0) > 0
-            df["Success"] = df["Success"].astype(int)
-
-            features = ["upstream_water_level", "downstream_water_level", "inflow_rate", "outflow_rate", "temperature", "humidity", "wind_speed"]
+            features = ["rainfall_mm", "inflow_cusecs", "outflow_cusecs", "storage_tmcft", "water_level_ft", "temperature_c", "humidity_percent", "spillway_open"]
             X = df[features]
-            y = df["Success"]
+            y_class = df["risk_label"]
+            y_reg = df["storage_tmcft"].shift(-1).ffill()
 
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
-            model = RandomForestClassifier(n_estimators=100, random_state=42)
-            model.fit(X_train, y_train)
+            # Train/Test Split
+            X_train, X_test, y_train_c, y_test_c = train_test_split(X, y_class, test_size=0.3, random_state=42)
+            _, _, y_train_r, y_test_r = train_test_split(X, y_reg, test_size=0.3, random_state=42)
 
-            y_pred = model.predict(X_test)
+            # Train Models
+            clf = RandomForestClassifier(n_estimators=100, random_state=42)
+            clf.fit(X_train, y_train_c)
+            
+            reg = RandomForestRegressor(n_estimators=100, random_state=42)
+            reg.fit(X_train, y_train_r)
 
-            accuracy = accuracy_score(y_test, y_pred)
-            cm = confusion_matrix(y_test, y_pred)
-            r2 = r2_score(y_test, y_pred)
-            mae = mean_absolute_error(y_test, y_pred)
-            rmse = mean_squared_error(y_test, y_pred, squared=False)
-            TP, FN, FP, TN = cm[1, 1], cm[1, 0], cm[0, 1], cm[0, 0]
-
+            # Test metrics
+            y_pred_c = clf.predict(X_test)
+            accuracy = accuracy_score(y_test_c, y_pred_c)
+            
+            y_pred_r = reg.predict(X_test)
+            r2 = r2_score(y_test_r, y_pred_r)
+            mae = mean_absolute_error(y_test_r, y_pred_r)
+            rmse = root_mean_squared_error(y_test_r, y_pred_r)
+            
+            # Confusion Matrix calculation. 
+            # Because risks can be Low/Medium/High, cm is 3x3. We'll simplify TP/FP stats for the UI.
+            labels = clf.classes_
+            cm = confusion_matrix(y_test_c, y_pred_c, labels=labels)
+            
+            # For simplicity in UI, we just pass accuracy map since TP/FN meant for binary
             confusion_data = {
-                "TP": int(TP), 
-                "FN": int(FN), 
-                "FP": int(FP), 
-                "TN": int(TN), 
+                "TP": "N/A", "FN": "N/A", "FP": "N/A", "TN": "N/A", 
                 "accuracy": round(accuracy, 2)
             }
             regression_metrics = {
-                "r2": round(r2, 2), 
-                "mae": round(mae, 2), 
-                "rmse": round(rmse, 2)
+                "r2": round(r2, 3), 
+                "mae": round(mae, 3), 
+                "rmse": round(rmse, 3)
             }
-
             
-            pred_counts = pd.Series(y_pred).value_counts()
+            pred_counts = pd.Series(y_pred_c).value_counts()
             prediction_dict = {
-                "Success": int(pred_counts.get(1, 0)),
-                "Failure": int(pred_counts.get(0, 0))
+                "Low": int(pred_counts.get("Low", 0)),
+                "Medium": int(pred_counts.get("Medium", 0)),
+                "High": int(pred_counts.get("High", 0))
             }
-            prediction_data = json.dumps(prediction_dict)  # Convert to JSON string
+            prediction_data = json.dumps(prediction_dict)
 
-            # FIXED: Properly serialize feature importance as JSON string
-            importances = model.feature_importances_
-            feature_dict = {features[i]: round(float(importances[i]), 3) for i in range(len(features))}
-            feature_dict = dict(sorted(feature_dict.items(), key=lambda x: x[1], reverse=True))
-            feature_data = json.dumps(feature_dict)  # Convert to JSON string
+            # Feature Importance — sorted descending
+            raw_importances = clf.feature_importances_.tolist()
+            paired = sorted(
+                zip(features, raw_importances),
+                key=lambda x: x[1],
+                reverse=True
+            )
+            feature_names_sorted    = [str(p[0]) for p in paired]
+            importances_sorted      = [round(float(p[1]), 4) for p in paired]
 
-            if (FP + FN) > 10 or accuracy < 0.8:
-                alert_status = "HIGH ALERT"
-                inflow_capacity = int(df["inflow_rate"].max())
-                recommended_release = int(df["outflow_rate"].max() + 50)
-            elif (FP + FN) > 5:
-                alert_status = "LOW ALERT"
-                inflow_capacity = int(df["inflow_rate"].max())
-                recommended_release = int(df["outflow_rate"].max())
+            # Kept for legacy compatibility
+            feature_dict = dict(zip(feature_names_sorted, importances_sorted))
+            feature_data = json.dumps(feature_dict)
+
+            # New separate JSON arrays consumed by the overhauled JS chart
+            feature_names_json      = json.dumps(feature_names_sorted)
+            feature_importances_json = json.dumps(importances_sorted)
+
+            # Debug — confirms values in Django terminal
+            print("FEATURE NAMES:", feature_names_sorted)
+            print("IMPORTANCES:  ", importances_sorted)
+
+            # Create live testing vector from the last row + live weather
+            latest_row = df.iloc[-1].copy()
+            if weather_data:
+                latest_row["temperature_c"] = weather_data.get("temperature", latest_row["temperature_c"])
+                latest_row["humidity_percent"] = weather_data.get("humidity", latest_row["humidity_percent"])
+                desc = weather_data.get("description", "").lower()
+                if "rain" in desc:
+                    latest_row["rainfall_mm"] += 20.0 # simulate rain impact
+                    latest_row["inflow_cusecs"] += 500.0
+
+            live_X = pd.DataFrame([latest_row[features].values], columns=features)
+            
+            live_risk = clf.predict(live_X)[0]
+            live_next_storage = reg.predict(live_X)[0]
+            
+            capacity = df["capacity_tmcft"].iloc[0]
+            current_storage = latest_row["storage_tmcft"]
+            
+            # alert logic
+            if live_risk == "High":
+                alert_status = "RELEASE"
+            elif live_risk == "Medium":
+                alert_status = "MONITOR"
             else:
-                alert_status = "NORMAL"
+                alert_status = "HOLD"
+
+            # Generate 7-day projection timeline for charting
+            avg_daily_change = df["storage_tmcft"].diff().dropna().tail(30).mean()
+            timeline = [live_next_storage]
+            for _ in range(6):
+                timeline.append(timeline[-1] + avg_daily_change)
+            timeline = [float(round(max(0, val), 2)) for val in timeline]
+
+            prediction_details = {
+                "live_risk": live_risk,
+                "current_storage": float(round(current_storage, 2)),
+                "next_storage": float(round(live_next_storage, 2)),
+                "capacity": float(capacity),
+                "storage_pct": round(min(100, (current_storage / capacity) * 100)) if capacity > 0 else 0,
+                "timeline": timeline
+            }
 
             elapsed_time = round(time.time() - start_time, 2)
-            result_text = f"Model Accuracy: {accuracy:.2%}. Current Alert Status: {alert_status}. Computation completed in {elapsed_time} seconds."
+            result_text = f"Trained on: {dam_name}.csv (dummy simulation data). Computation completed in {elapsed_time}s."
 
         except Exception as ex:
             result_text = f"Error during computation: {ex}"
-            # Log the full error for debugging
             import traceback
             print(f"Full error traceback: {traceback.format_exc()}")
 
@@ -182,98 +233,64 @@ def dam_control(request):
         "confusion_data": confusion_data,
         "regression_metrics": regression_metrics,
         "alert_status": alert_status,
-        "inflow_capacity": inflow_capacity,
-        "recommended_release": recommended_release,
-        "prediction_data": prediction_data,  # Now properly serialized as JSON
-        "feature_data": feature_data,  # Now properly serialized as JSON
+        "prediction_details": prediction_details,
+        "prediction_data": prediction_data,
+        "feature_data": feature_data,
+        "feature_names_json": feature_names_json if feature_names_json is not None else "[]",
+        "feature_importances_json": feature_importances_json if feature_importances_json is not None else "[]",
+        "dam_name_display": weather_data.get("dam_display", dam_name.capitalize()) if weather_data else "Unknown Dam"
     })
 
 
 def hydroalert(request):
-    result = None
-    graph_div = None
-    alerts = []
-    csv_file_path = r"C:\Users\VIKRAM\OneDrive\Desktop\DESKTOPP (1)\SIH\weather_app\myproject\weather_project\dam\threegorges-water-storage.csv"
-
-    high_rainfall_threshold = 50
-    high_inflow_threshold = 200
-    low_water_level_threshold = 600
-    low_inflow_threshold = 50
-
-    def check_critical_situation(row, high_rainfall, high_inflow, low_water_level, low_inflow):
-        if row['Total Rainfall Last 3 Days'] > high_rainfall or row['Inflow (cubic feet/sec)'] > high_inflow:
-            return "ALERT: High water level detected!"
-        elif row['Current Water Level (mcft)'] < low_water_level or row['Inflow (cubic feet/sec)'] < low_inflow:
-            return "ALERT: Low water level detected!"
-        return "Normal"
-
+    import glob
+    import datetime
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    data_dir = os.path.join(base_dir, 'dam', 'data', 'dams')
+    
+    dam_alerts = []
+    
     try:
-        df = pd.read_csv(csv_file_path)
-
-        df.rename(columns={
-            'measurement_date': 'Date',
-            'upstream_water_level': 'Current Water Level (mcft)'
-        }, inplace=True)
-
-        if 'Rainfall Amount (mm)' not in df.columns:
-            df['Rainfall Amount (mm)'] = 0
-
-        df['Total Rainfall Last 3 Days'] = df['Rainfall Amount (mm)'].rolling(window=3).sum().fillna(0)
-        df['Average Rainfall Last 3 Days'] = df['Rainfall Amount (mm)'].rolling(window=3).mean().fillna(0)
-
-        required_features = ['Rainy Season Indicator', 'Inflow (cubic feet/sec)', 'Outflow (cubic feet/sec)',
-                             'Water Flow (cubic feet/sec)', 'Total Rainfall Last 3 Days', 'Average Rainfall Last 3 Days']
-
-        for f in required_features:
-            if f not in df.columns:
-                df[f] = 0
-
-        df['Success'] = df['Current Water Level (mcft)'].diff().fillna(0) > 0
-        df['Success'] = df['Success'].astype(int)
-
-        X = df[required_features]
-        y = df['Success']
-
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
-        model = RandomForestClassifier(n_estimators=200, max_depth=5, min_samples_split=5, random_state=42)
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
-        accuracy = accuracy_score(y_test, y_pred)
-
-        df['Alert'] = df.apply(lambda row: check_critical_situation(
-            row, high_rainfall_threshold, high_inflow_threshold, low_water_level_threshold, low_inflow_threshold), axis=1)
-        alerts = df['Alert'].unique().tolist()
-
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=df['Date'], y=df['Current Water Level (mcft)'],
-                                 mode='lines+markers', name='Water Level'))
-        fig.add_trace(go.Scatter(x=df[df['Alert'] == "ALERT: High water level detected!"]['Date'],
-                                 y=df[df['Alert'] == "ALERT: High water level detected!"]['Current Water Level (mcft)'],
-                                 mode='markers', name='High Alert', marker=dict(color='red', size=10)))
-        fig.add_trace(go.Scatter(x=df[df['Alert'] == "ALERT: Low water level detected!"]['Date'],
-                                 y=df[df['Alert'] == "ALERT: Low water level detected!"]['Current Water Level (mcft)'],
-                                 mode='markers', name='Low Alert', marker=dict(color='blue', size=10)))
+        csv_files = glob.glob(os.path.join(data_dir, "*.csv"))
+        for file in csv_files:
+            dam_filename = os.path.basename(file)
+            dam_id = dam_filename.replace('.csv', '')
+            dam_name_display = dam_id.replace('_', ' ').capitalize() + " Dam"
+            
+            df = pd.read_csv(file)
+            if df.empty: continue
+            
+            last_row = df.iloc[-1]
+            risk = last_row.get('risk_label', 'Low')
+            storage = last_row.get('storage_tmcft', 0)
+            capacity = last_row.get('capacity_tmcft', 1)
+            storage_pct = round(min(100, (storage / capacity) * 100)) if capacity > 0 else 0
+            
+            timestamp = last_row.get('date', datetime.datetime.now().strftime('%Y-%m-%d'))
+            
+            if risk == "High":
+                action = "RELEASE / Critical"
+            elif risk == "Medium":
+                action = "MONITOR / Proceed with caution"
+            else:
+                action = "HOLD / Safe"
+                
+            dam_alerts.append({
+                "dam_id": dam_id,
+                "dam_name": dam_name_display,
+                "risk_label": risk,
+                "storage_pct": storage_pct,
+                "action": action,
+                "timestamp": timestamp
+            })
+            
+        # Sort by risk severity (High -> Medium -> Low)
+        risk_order = {"High": 0, "Medium": 1, "Low": 2}
+        dam_alerts.sort(key=lambda x: risk_order.get(x['risk_label'], 3))
         
-        # Update layout for better visualization
-        fig.update_layout(
-            title="Water Level Monitoring with Alerts",
-            xaxis_title="Date",
-            yaxis_title="Water Level (mcft)",
-            hovermode='x unified',
-            template='plotly_white'
-        )
-        
-        graph_div = pio.to_html(fig, full_html=False)
-        result = f"Hydro Alert data processed successfully. Model Accuracy: {accuracy:.2%}"
-
     except Exception as e:
-        result = f"Error processing hydro alert data: {str(e)}"
-        # Log the full error for debugging
-        import traceback
-        print(f"Full error traceback: {traceback.format_exc()}")
-
+        print(f"Error in hydroalert loading: {e}")
+        
     return render(request, 'dam/hydroalert.html', {
-        'result': result,
-        'graph_div': graph_div,
-        'alerts': alerts,
+        'dam_alerts': dam_alerts
     })

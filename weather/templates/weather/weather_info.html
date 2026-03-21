@@ -1,111 +1,198 @@
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Weather Info</title>
-        <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-        <style>
-            #map {
-                height: 500px;
-                border: 2px solid #ddd;
-                border-radius: 8px;
-                margin-top: 20px;
-            }
-        </style>
-    </head>
-    <body class="bg-gradient-to-r from-blue-500 to-purple-600 min-h-screen flex flex-col">
-        <nav class="bg-white shadow-md">
-            <div class="container mx-auto px-4 py-2 flex justify-between items-center">
-                <h1 class="text-xl font-bold text-blue-600">Weather & Dam Control App</h1>
-                <div>
-                    <a href="{% url 'home' %}" class="text-gray-600 hover:text-blue-600 px-4">Home</a>
-                    <a href="{% url 'get_weather' %}" class="text-gray-600 hover:text-blue-600 px-4">Weather</a>
-                    <a href="{% url 'dam_control' %}" class="text-gray-600 hover:text-blue-600 px-4">Dam Control</a>
-                    <a href="{% url 'hydroalert' %}" class="text-gray-600 hover:text-blue-600 px-4">Hydro Alert</a>
-                </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Info — BrookStream.AI</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+    <style>
+        :root {
+            --bg-base:#0a0f1e; --bg-surface:#0f1629; --bg-raised:#162040;
+            --border:#1e3a5f; --accent-blue:#0ea5e9; --accent-cyan:#06b6d4;
+            --safe:#10b981; --text-primary:#f0f9ff; --text-secondary:#94a3b8; --text-muted:#475569;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+        body {
+            background-color: var(--bg-base);
+            background-image:
+                linear-gradient(rgba(14,165,233,0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(14,165,233,0.04) 1px, transparent 1px);
+            background-size: 40px 40px;
+            font-family: 'Inter', sans-serif; color: var(--text-primary);
+            min-height: 100vh; display: flex; flex-direction: column;
+        }
+        .bs-nav {
+            position: fixed; top:0; left:0; right:0; z-index:100;
+            background: rgba(10,15,30,0.92); backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+        }
+        .bs-nav::after { content:''; display:block; height:1px; background:linear-gradient(90deg,transparent,var(--accent-blue),transparent); }
+        .nav-inner { max-width:1280px; margin:0 auto; padding:0 2rem; height:64px; display:flex; align-items:center; justify-content:space-between; }
+        .nav-logo { display:flex; align-items:center; gap:10px; text-decoration:none; font-weight:800; font-size:1.25rem; color:var(--text-primary); letter-spacing:-0.02em; }
+        .nav-logo span { color: var(--accent-blue); }
+        .nav-links { display:flex; gap:2rem; }
+        .nav-link { font-size:0.875rem; font-weight:500; color:var(--text-secondary); text-decoration:none; padding-bottom:4px; position:relative; transition:color 0.3s; }
+        .nav-link::after { content:''; position:absolute; bottom:0; left:0; width:0%; height:2px; background:var(--accent-blue); transition:width 0.3s; }
+        .nav-link:hover { color:var(--accent-blue); }
+        .nav-link:hover::after { width:100%; }
+        .status-dot { display:flex; align-items:center; gap:6px; font-size:0.75rem; font-weight:500; color:var(--safe); }
+        .status-dot::before { content:''; display:inline-block; width:8px; height:8px; background:var(--safe); border-radius:50%; animation:statusPulse 2s infinite; }
+        @keyframes statusPulse { 0%,100%{box-shadow:0 0 0 0 rgba(16,185,129,0.6)} 70%{box-shadow:0 0 0 6px rgba(16,185,129,0)} }
+        .live-clock { font-family:'JetBrains Mono',monospace; font-size:0.8rem; color:var(--text-secondary); }
+
+        main { flex-grow:1; padding: 90px 1.5rem 3rem; max-width:1200px; margin:0 auto; width:100%; }
+
+        .info-grid { display:grid; grid-template-columns:320px 1fr; gap:1.5rem; }
+        @media (max-width:900px) { .info-grid { grid-template-columns:1fr; } }
+
+        .info-card {
+            background: rgba(15,22,41,0.9); border:1px solid rgba(14,165,233,0.12);
+            border-radius:16px; padding:1.75rem; backdrop-filter:blur(12px);
+        }
+        .info-card h1 { font-size:1.4rem; font-weight:700; color:#f0f9ff; margin-bottom:1.25rem; }
+        .form-input {
+            width:100%; background:#0a0f1e; border:1.5px solid #1e3a5f;
+            border-radius:8px; color:#f0f9ff; padding:12px 14px;
+            font-size:0.9rem; font-family:'Inter',sans-serif;
+            transition:border-color 0.3s, box-shadow 0.3s; margin-bottom:0.75rem;
+        }
+        .form-input:focus { outline:none; border-color:#0ea5e9; box-shadow:0 0 0 3px rgba(14,165,233,0.15); }
+        .form-input::placeholder { color:#475569; }
+        .btn-fetch {
+            width:100%; background:linear-gradient(135deg,#0ea5e9,#06b6d4); color:white;
+            font-weight:700; padding:13px; border-radius:8px; border:none; cursor:pointer;
+            font-family:'Inter',sans-serif; transition:all 0.3s;
+        }
+        .btn-fetch:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(14,165,233,0.4); }
+        .error-box { background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:8px; padding:0.875rem; color:#ef4444; margin-top:0.75rem; font-size:0.85rem; }
+
+        .weather-result { background:rgba(10,15,30,0.5); border:1px solid rgba(14,165,233,0.08); border-radius:10px; padding:1rem; margin-top:1rem; }
+        .weather-result h5 { font-size:1rem; font-weight:700; color:#0ea5e9; margin-bottom:0.5rem; }
+        .weather-result p { font-size:0.82rem; color:#94a3b8; margin:3px 0; }
+        .weather-result p strong { color:#f0f9ff; }
+
+        #map { height:450px; border-radius:12px; border:1px solid rgba(14,165,233,0.15); margin-top:0; }
+
+        .bs-footer { background:var(--bg-surface); border-top:1px solid var(--border); padding:1.5rem 2rem; text-align:center; font-size:0.8rem; color:var(--text-muted); }
+        .bs-footer strong { color:var(--accent-blue); }
+    </style>
+</head>
+<body>
+
+<nav class="bs-nav">
+    <div class="nav-inner">
+        <a href="{% url 'home' %}" class="nav-logo">
+            <svg width="26" height="26" viewBox="0 0 28 28" fill="none"><path d="M14 2C14 2 6 10 6 16C6 20.4 9.6 24 14 24C18.4 24 22 20.4 22 16C22 10 14 2 14 2Z" fill="url(#wg1)"/><defs><linearGradient id="wg1" x1="14" y1="2" x2="14" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#0ea5e9"/><stop offset="100%" stop-color="#06b6d4"/></linearGradient></defs></svg>
+            Brook<span>Stream</span>.AI
+        </a>
+        <div class="nav-links">
+            <a href="{% url 'home' %}" class="nav-link">Dashboard</a>
+            <a href="{% url 'get_weather' %}" class="nav-link">Monitor</a>
+            <a href="{% url 'dam_control' %}" class="nav-link">Dam Control</a>
+            <a href="{% url 'hydroalert' %}" class="nav-link">Hydro Alert</a>
+        </div>
+        <div style="display:flex;align-items:center;gap:1rem;">
+            <span class="live-clock" id="navClock">--:--:--</span>
+            <span class="status-dot">System Online</span>
+        </div>
+    </div>
+</nav>
+
+<main>
+    <div class="info-grid">
+        <!-- Input Panel -->
+        <div class="info-card">
+            <h1>🌍 Weather Info</h1>
+            <form method="GET" action="">
+                <input type="text" name="city" class="form-input"
+                    placeholder="Enter city / dam / reservoir name"
+                    value="{{ weather_data.City|default:'' }}" required>
+                <button type="submit" class="btn-fetch">Fetch Details</button>
+            </form>
+
+            {% if error %}
+            <div class="error-box">⚠️ {{ error }}</div>
+            {% endif %}
+
+            {% if weather_data %}
+            <div class="weather-result">
+                <h5>{{ weather_data.City }}</h5>
+                <p><strong>Temperature:</strong> {{ weather_data.Temperature }}°C</p>
+                <p><strong>Conditions:</strong> {{ weather_data.Description }}</p>
+                <p><strong>Humidity:</strong> {{ weather_data.Humidity }}%</p>
+                <p><strong>Wind Speed:</strong> {{ weather_data.Wind_Speed }} km/h</p>
             </div>
-        </nav>
+            {% endif %}
 
-        <main class="flex-grow p-8">
-            <div class="container mx-auto flex flex-col lg:flex-row lg:items-start">
-                <div class="bg-white rounded-lg shadow-lg p-8 max-w-md lg:max-w-xs lg:mr-8 flex-shrink-0">
-                    <h1 class="text-3xl font-bold text-center text-gray-800">Weather Information</h1>
-                    <form method="GET" action="" class="mt-4">
-                        <div class="mb-4">
-                            <input type="text" name="city" class="border border-gray-300 rounded-lg p-2 w-full" placeholder="Enter city/dam/reservior name" required>
-                        </div>
-                        <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 transition duration-300">Fetch details</button>
-                    </form>
+            {% if chart_data %}
+            <canvas id="weatherChart" height="160" style="margin-top:1rem; width:100%;"></canvas>
+            <script>
+                const ctx = document.getElementById('weatherChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: {{ chart_data.labels|safe }},
+                        datasets: [{
+                            label: 'Weather Data',
+                            data: {{ chart_data.datasets.0.data|safe }},
+                            backgroundColor: 'rgba(14,165,233,0.4)',
+                            borderColor: '#0ea5e9', borderWidth: 1, borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: { beginAtZero: true, ticks: { color:'#94a3b8' }, grid: { color:'rgba(14,165,233,0.07)' } },
+                            x: { ticks: { color:'#94a3b8' }, grid: { display: false } }
+                        },
+                        plugins: { legend: { labels: { color:'#94a3b8' } } },
+                        responsive: true
+                    }
+                });
+            </script>
+            {% endif %}
+        </div>
 
-                    {% if error %}
-                        <div class="mt-4 text-red-500 text-center">{{ error }}</div>
-                    {% endif %}
-
-                    {% if weather_data %}
-                        <div class="card mt-4 p-4 border border-black-300 rounded-lg">
-                            <h5 class="text-xl font-semibold">{{ weather_data.City }}</h5>
-                            <p class="text-black-700">Temperature: {{ weather_data.Temperature }}°C</p>
-                            <p class="text-black-700">Description: {{ weather_data.Description }}</p>
-                            <p class="text-black-700">Humidity: {{ weather_data.Humidity }}%</p>
-                            <p class="text-black-700">Wind Speed: {{ weather_data.Wind_Speed }} km/s</p>
-                        </div>
-                    {% endif %}
-
-                    {% if chart_data %}
-                        <canvas id="weatherChart" width="400" height="200" class="mt-4"></canvas>
-                        <script>
-                            var ctx = document.getElementById('weatherChart').getContext('2d');
-                            var weatherChart = new Chart(ctx, {
-                                type: 'bar',
-                                data: {
-                                    labels: {{ chart_data.labels|safe }},
-                                    datasets: [{
-                                        label: 'Weather Data',
-                                        data: {{ chart_data.datasets.0.data|safe }},
-                                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                                        borderColor: 'rgba(54, 162, 235, 1)',
-                                        borderWidth: 1
-                                    }]
-                                },
-                                options: {
-                                    scales: {
-                                        y: {
-                                            beginAtZero: true
-                                        }
-                                    }
-                                }
-                            });
-                        </script>
-                    {% endif %}
-                </div>
-
-                <div class="flex-grow mt-8 lg:mt-0">
-                    {% if weather_data %}
-                        <div id="map"></div>
-                        <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-                        <script>
-                            var map = L.map('map').setView([{{ weather_data.Latitude }}, {{ weather_data.Longitude }}], 13);
-
-                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                                maxZoom: 19,
-                            }).addTo(map);
-
-                            L.marker([{{ weather_data.Latitude }}, {{ weather_data.Longitude }}]).addTo(map)
-                                .bindPopup('Location: {{ weather_data.City }}')
-                                .openPopup();
-                        </script>
-                    {% endif %}
-                </div>
+        <!-- Map Panel -->
+        <div class="info-card">
+            {% if weather_data %}
+            <div id="map"></div>
+            <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+            <script>
+                var map = L.map('map').setView([{{ weather_data.Latitude }}, {{ weather_data.Longitude }}], 13);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+                L.marker([{{ weather_data.Latitude }}, {{ weather_data.Longitude }}])
+                    .addTo(map).bindPopup('{{ weather_data.City }}').openPopup();
+            </script>
+            {% else %}
+            <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:350px;color:#475569;gap:1rem;">
+                <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor" opacity="0.4"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                <p style="font-size:0.9rem;">Enter a city or dam name to view the map</p>
             </div>
-        </main>
+            {% endif %}
+        </div>
+    </div>
+</main>
 
-        <footer class="bg-white py-4">
-            <div class="container mx-auto text-center text-gray-600">
-                <p>&copy; Weather & Dam Control App. All rights reserved.</p>
-            </div>
-        </footer>
-    </body>
-    </html>
+<footer class="bs-footer">
+    <strong>BrookStream.AI</strong> &copy; 2024 &nbsp;|&nbsp; Tamil Nadu Dam Monitoring &amp; Flood Prediction System
+</footer>
+
+<script>
+function updateClock() {
+    const now = new Date();
+    const el = document.getElementById('navClock');
+    if (el) el.textContent = [now.getHours(),now.getMinutes(),now.getSeconds()].map(n=>String(n).padStart(2,'0')).join(':');
+}
+updateClock(); setInterval(updateClock, 1000);
+</script>
+</body>
+</html>

@@ -1,0 +1,297 @@
+{% extends "dam/base.html" %}
+
+{% block title %}Hydro Alert — Dam Status Registry{% endblock %}
+
+{% block extra_styles %}
+.alert-page { max-width: 1280px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+/* Page Header */
+.page-header { margin-bottom: 2.5rem; }
+.page-header h1 { font-size: 2rem; font-weight: 800; color: #f0f9ff; margin-bottom: 0.4rem; }
+.page-header p  { font-size: 0.85rem; color: #475569; }
+.page-header .refresh-note {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(14,165,233,0.08); border: 1px solid rgba(14,165,233,0.15);
+    border-radius: 6px; padding: 4px 12px; font-size: 0.72rem; color: #94a3b8;
+    margin-top: 0.75rem;
+}
+
+/* Summary Stat Cards */
+.summary-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;
+    margin-bottom: 2rem;
+}
+@media (max-width: 640px) { .summary-grid { grid-template-columns: 1fr; } }
+.summary-card {
+    background: rgba(15,22,41,0.9); border-radius: 14px; padding: 1.5rem;
+    border: 1px solid rgba(14,165,233,0.1); backdrop-filter: blur(12px);
+    display: flex; align-items: center; gap: 1rem; transition: all 0.3s;
+}
+.summary-card:hover { transform: translateY(-3px); }
+.summary-card.safe-card   { border-left: 3px solid #10b981; }
+.summary-card.warn-card   { border-left: 3px solid #f59e0b; }
+.summary-card.danger-card { border-left: 3px solid #ef4444; }
+.sc-icon { font-size: 1.75rem; flex-shrink: 0; }
+.sc-text {}
+.sc-count {
+    font-family: 'JetBrains Mono', monospace; font-size: 2rem; font-weight: 700;
+    line-height: 1; display: block;
+}
+.safe-card .sc-count   { color: #10b981; }
+.warn-card .sc-count   { color: #f59e0b; }
+.danger-card .sc-count { color: #ef4444; }
+.sc-label { font-size: 0.75rem; color: #94a3b8; font-weight: 500; margin-top: 2px; }
+
+/* Filter Tabs */
+.filter-tabs {
+    display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;
+    border-bottom: 1px solid rgba(14,165,233,0.1); margin-bottom: 1.25rem;
+    padding-bottom: 0;
+}
+.filter-tab {
+    padding: 0.6rem 1.25rem; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+    background: transparent; border: none; color: #475569;
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+    transition: all 0.2s; letter-spacing: 0.04em;
+}
+.filter-tab:hover { color: #94a3b8; }
+.filter-tab.active     { color: #0ea5e9; border-bottom-color: #0ea5e9; }
+.filter-tab.active-low { color: #10b981; border-bottom-color: #10b981; }
+.filter-tab.active-med { color: #f59e0b; border-bottom-color: #f59e0b; }
+.filter-tab.active-high{ color: #ef4444; border-bottom-color: #ef4444; }
+
+/* Alert Table */
+.table-card {
+    background: rgba(15,22,41,0.9); border: 1px solid rgba(14,165,233,0.1);
+    border-radius: 16px; overflow: hidden; backdrop-filter: blur(12px);
+    margin-bottom: 2rem;
+}
+.table-responsive { overflow-x: auto; }
+.alert-table { width: 100%; border-collapse: collapse; }
+.alert-table thead th {
+    background: #162040; color: #94a3b8; font-size: 0.68rem;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+    padding: 0.875rem 1.25rem; text-align: left; white-space: nowrap;
+    cursor: pointer; user-select: none; transition: color 0.2s;
+}
+.alert-table thead th:hover { color: #f0f9ff; }
+.alert-table thead th .sort-arrow { margin-left: 4px; opacity: 0.4; font-size: 0.7rem; }
+.alert-table tbody tr {
+    border-bottom: 1px solid rgba(14,165,233,0.06);
+    transition: background 0.2s;
+}
+.alert-table tbody tr:nth-child(even) { background: rgba(22,32,64,0.3); }
+.alert-table tbody tr:hover { background: rgba(14,165,233,0.06); }
+.alert-table td { padding: 0.875rem 1.25rem; font-size: 0.85rem; color: #f0f9ff; vertical-align: middle; }
+.td-dam-name { font-weight: 600; }
+.td-muted { color: #94a3b8; font-size: 0.78rem; }
+
+/* Progress mini bar */
+.mini-bar { display: flex; align-items: center; gap: 0.5rem; }
+.mini-bar .mb-track { width: 64px; height: 5px; background: rgba(30,58,95,0.7); border-radius: 3px; overflow: hidden; }
+.mini-bar .mb-fill  { height: 100%; border-radius: 3px; }
+.mb-fill.safe   { background: #10b981; }
+.mb-fill.warn   { background: #f59e0b; }
+.mb-fill.danger { background: #ef4444; }
+.mb-val { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #94a3b8; white-space: nowrap; }
+
+/* Badge */
+.risk-badge { border-radius: 999px; padding: 3px 12px; font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.rb-low    { background:#064e3b; color:#10b981; border:1px solid #10b981; }
+.rb-medium { background:#451a03; color:#f59e0b; border:1px solid #f59e0b; }
+.rb-high   { background:#450a0a; color:#ef4444; border:1px solid #ef4444; }
+
+/* Status Grid */
+.status-section { margin-top: 2.5rem; }
+.status-section h2 { font-size: 1rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1.25rem; }
+.status-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+.dam-status-card {
+    background: rgba(15,22,41,0.9); border-radius: 12px; padding: 1rem;
+    border: 1px solid rgba(14,165,233,0.08); border-top-width: 3px;
+    backdrop-filter: blur(12px); transition: all 0.3s;
+}
+.dam-status-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+.dam-status-card.risk-low    { border-top-color: #10b981; }
+.dam-status-card.risk-medium { border-top-color: #f59e0b; }
+.dam-status-card.risk-high   { border-top-color: #ef4444; }
+.dsc-name { font-size: 0.82rem; font-weight: 700; color: #f0f9ff; margin-bottom: 0.625rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dsc-bar  { width: 100%; height: 4px; background: rgba(30,58,95,0.7); border-radius: 2px; overflow: hidden; margin-bottom: 0.5rem; }
+.dsc-bar-fill { height: 100%; border-radius: 2px; }
+.dsc-meta { display: flex; justify-content: space-between; align-items: center; }
+.dsc-pct  { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: #94a3b8; }
+.dsc-ts   { font-size: 0.65rem; color: #475569; }
+{% endblock %}
+
+{% block content %}
+<div class="alert-page">
+
+    <!-- Page Header -->
+    <div class="page-header fade-up">
+        <h1>🚨 Hydro Alert Monitoring</h1>
+        <p>Live risk registry across all monitored Tamil Nadu dams</p>
+        <div class="refresh-note">
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Data updates on each new computation run
+        </div>
+    </div>
+
+    <!-- Summary Stat Cards -->
+    {% with safe_count=0 warn_count=0 danger_count=0 %}
+    <div class="summary-grid fade-up delay-1">
+        <div class="summary-card safe-card">
+            <div class="sc-icon">🟢</div>
+            <div class="sc-text">
+                <span class="sc-count" id="safeCount">{{ dam_alerts|length }}</span>
+                <span class="sc-label">Calculating...</span>
+            </div>
+        </div>
+        <div class="summary-card warn-card">
+            <div class="sc-icon">🟡</div>
+            <div class="sc-text">
+                <span class="sc-count" id="warnCount">—</span>
+                <span class="sc-label">Dams — Monitor</span>
+            </div>
+        </div>
+        <div class="summary-card danger-card">
+            <div class="sc-icon">🔴</div>
+            <div class="sc-text">
+                <span class="sc-count" id="dangerCount">—</span>
+                <span class="sc-label">Dams — Critical</span>
+            </div>
+        </div>
+    </div>
+    {% endwith %}
+
+    <!-- Section: Alert Table -->
+    <div class="fade-up delay-2">
+        <!-- Filter Tabs -->
+        <div class="filter-tabs">
+            <button class="filter-tab active" id="tab-all"    onclick="filterTable(this,'All')">All Dams</button>
+            <button class="filter-tab"         id="tab-low"    onclick="filterTable(this,'Low')">Low Risk</button>
+            <button class="filter-tab"         id="tab-medium" onclick="filterTable(this,'Medium')">Medium Risk</button>
+            <button class="filter-tab"         id="tab-high"   onclick="filterTable(this,'High')">High Risk</button>
+        </div>
+
+        <div class="table-card">
+            <div class="table-responsive">
+                <table class="alert-table" id="alertsTable">
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable(0)">Dam Name <span class="sort-arrow">↕</span></th>
+                            <th onclick="sortTable(1)">Risk Level <span class="sort-arrow">↕</span></th>
+                            <th onclick="sortTable(2)">Storage % <span class="sort-arrow">↕</span></th>
+                            <th>Action Required</th>
+                            <th onclick="sortTable(4)">Last Updated <span class="sort-arrow">↕</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="alertsBody">
+                        {% for dam in dam_alerts %}
+                        <tr class="dam-row" data-risk="{{ dam.risk_label }}">
+                            <td class="td-dam-name">{{ dam.dam_name }}</td>
+                            <td>
+                                <span class="risk-badge {% if dam.risk_label == 'High' %}rb-high{% elif dam.risk_label == 'Medium' %}rb-medium{% else %}rb-low{% endif %}">
+                                    {{ dam.risk_label }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="mini-bar">
+                                    <div class="mb-track">
+                                        <div class="mb-fill {% if dam.risk_label == 'High' %}danger{% elif dam.risk_label == 'Medium' %}warn{% else %}safe{% endif %}" style="width:{{ dam.storage_pct }}%"></div>
+                                    </div>
+                                    <span class="mb-val">{{ dam.storage_pct }}%</span>
+                                </div>
+                            </td>
+                            <td class="td-muted">{{ dam.action }}</td>
+                            <td class="td-muted">{{ dam.timestamp }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" style="text-align:center; padding:2.5rem; color:#475569;">No dam data available. Run a computation first.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Grid -->
+    <div class="status-section fade-up delay-3">
+        <h2>Dam Status Overview</h2>
+        <div class="status-grid">
+            {% for dam in dam_alerts %}
+            <div class="dam-status-card risk-{{ dam.risk_label|lower }}">
+                <div class="dsc-name" title="{{ dam.dam_name }}">{{ dam.dam_name }}</div>
+                <div class="dsc-bar">
+                    <div class="dsc-bar-fill" style="width:{{ dam.storage_pct }}%;
+                        background: {% if dam.risk_label == 'High' %}#ef4444{% elif dam.risk_label == 'Medium' %}#f59e0b{% else %}#10b981{% endif %};"></div>
+                </div>
+                <div class="dsc-meta">
+                    <span class="risk-badge {% if dam.risk_label == 'High' %}rb-high{% elif dam.risk_label == 'Medium' %}rb-medium{% else %}rb-low{% endif %}" style="font-size:0.6rem; padding:2px 8px;">{{ dam.risk_label }}</span>
+                    <span class="dsc-pct">{{ dam.storage_pct }}%</span>
+                </div>
+                <div style="margin-top:0.4rem;"><span class="dsc-ts">{{ dam.timestamp }}</span></div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Compute counts from actual rows
+    const rows = document.querySelectorAll('.dam-row');
+    let safe = 0, warn = 0, danger = 0;
+    rows.forEach(r => {
+        const risk = r.dataset.risk;
+        if (risk === 'Low') safe++;
+        else if (risk === 'Medium') warn++;
+        else danger++;
+    });
+    document.getElementById('safeCount').textContent   = safe;
+    document.getElementById('warnCount').textContent   = warn;
+    document.getElementById('dangerCount').textContent = danger;
+    document.querySelector('#safeCount ~ .sc-label').textContent   = `Dam${safe !== 1 ? 's' : ''} — Safe`;
+});
+
+// Filter table by risk level
+function filterTable(btn, level) {
+    // Update tab states
+    document.querySelectorAll('.filter-tab').forEach(t => {
+        t.classList.remove('active','active-low','active-med','active-high');
+    });
+    const classMap = { 'All':'active', 'Low':'active-low', 'Medium':'active-med', 'High':'active-high' };
+    btn.classList.add(classMap[level] || 'active');
+
+    document.querySelectorAll('.dam-row').forEach(row => {
+        row.style.display = (!level || level === 'All' || row.dataset.risk === level) ? '' : 'none';
+    });
+}
+
+// Sort table by column
+let sortDir = {};
+function sortTable(colIndex) {
+    const tbody = document.getElementById('alertsBody');
+    const rows  = Array.from(tbody.querySelectorAll('.dam-row'));
+    sortDir[colIndex] = !sortDir[colIndex];
+    const dir = sortDir[colIndex] ? 1 : -1;
+
+    const riskOrder = { 'High': 0, 'Medium': 1, 'Low': 2 };
+
+    rows.sort((a, b) => {
+        const av = a.cells[colIndex]?.textContent.trim() || '';
+        const bv = b.cells[colIndex]?.textContent.trim() || '';
+        if (colIndex === 1) { // Risk level
+            return dir * ((riskOrder[av] ?? 3) - (riskOrder[bv] ?? 3));
+        }
+        const an = parseFloat(av), bn = parseFloat(bv);
+        if (!isNaN(an) && !isNaN(bn)) return dir * (an - bn);
+        return dir * av.localeCompare(bv);
+    });
+    rows.forEach(r => tbody.appendChild(r));
+}
+</script>
+{% endblock %}

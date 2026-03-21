@@ -1,292 +1,717 @@
 {% extends 'dam/base.html' %}
 
-{% block title %}⚙️ Dam Control Center{% endblock %}
+{% block title %}Dam Control Center{% endblock %}
+
+{% block extra_styles %}
+/* ── Layout ── */
+.control-page { max-width: 1280px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+.control-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; align-items: start; }
+@media (max-width: 1024px) { .control-grid { grid-template-columns: 1fr; } }
+
+/* ── Left Panel ── */
+.left-panel { position: sticky; top: 90px; }
+.panel-card {
+    background: rgba(15,22,41,0.9);
+    border: 1px solid rgba(14,165,233,0.12);
+    border-radius: 16px; padding: 1.75rem;
+    backdrop-filter: blur(12px); margin-bottom: 1rem;
+}
+.panel-card h2 { font-size: 1.4rem; font-weight: 700; color: #f0f9ff; margin-bottom: 0.25rem; }
+.panel-card .dam-region { font-size: 0.78rem; color: #94a3b8; margin-bottom: 1.25rem; }
+
+/* Status Progress */
+.status-widget { margin-bottom: 1.25rem; }
+.status-label { font-size: 0.75rem; color: #94a3b8; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; display: flex; justify-content: space-between; }
+.progress-track { width: 100%; background: #1e3a5f; border-radius: 6px; height: 8px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, #0ea5e9, #06b6d4); border-radius: 6px; transition: width 0.5s ease; }
+
+/* Form Styles */
+.ctrl-form p { margin-bottom: 0.75rem; }
+.ctrl-form p label { display: block; font-size: 0.78rem; color: #94a3b8; margin-bottom: 4px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+.ctrl-form select, .ctrl-form input {
+    width: 100%; background: #0a0f1e; border: 1.5px solid #1e3a5f;
+    border-radius: 8px; color: #f0f9ff; padding: 10px 14px;
+    font-size: 0.9rem; font-family: 'Inter', sans-serif;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+.ctrl-form select:focus, .ctrl-form input:focus {
+    outline: none; border-color: #0ea5e9;
+    box-shadow: 0 0 0 3px rgba(14,165,233,0.15);
+}
+.ctrl-form select option { background: #0f1629; }
+
+.btn-run {
+    width: 100%; background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+    color: white; font-weight: 700; font-size: 1rem;
+    padding: 14px; border-radius: 10px; border: none;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    gap: 8px; transition: all 0.3s;
+    box-shadow: 0 4px 20px rgba(14,165,233,0.3);
+}
+.btn-run:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(14,165,233,0.5); }
+.btn-reset {
+    width: 100%; background: rgba(30,58,95,0.6); color: #94a3b8;
+    font-weight: 600; font-size: 0.875rem; padding: 11px;
+    border-radius: 10px; border: 1px solid rgba(30,58,95,0.8);
+    cursor: pointer; transition: all 0.3s; margin-top: 0.625rem;
+}
+.btn-reset:hover { background: rgba(30,58,95,0.9); color: #f0f9ff; }
+
+/* Weather Strip */
+.weather-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.625rem; }
+.weather-pill {
+    background: rgba(10,15,30,0.6); border: 1px solid rgba(14,165,233,0.1);
+    border-radius: 10px; padding: 0.75rem 0.5rem; text-align: center;
+}
+.weather-pill .wp-icon { font-size: 1.25rem; }
+.weather-pill .wp-val { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; font-weight: 700; color: #0ea5e9; display: block; }
+.weather-pill .wp-label { font-size: 0.65rem; color: #475569; }
+
+/* ── RIGHT: Results Area ── */
+.results-area { display: flex; flex-direction: column; gap: 1rem; }
+
+/* Row 1: Verdict Banner */
+.verdict-banner {
+    border-radius: 16px; padding: 1.75rem 2rem;
+    backdrop-filter: blur(12px); position: relative; overflow: hidden;
+}
+.verdict-banner.hold {
+    background: rgba(16,185,129,0.07);
+    border: 1.5px solid rgba(16,185,129,0.4);
+}
+.verdict-banner.monitor {
+    background: rgba(245,158,11,0.07);
+    border: 1.5px solid rgba(245,158,11,0.4);
+}
+.verdict-banner.release {
+    background: rgba(239,68,68,0.07);
+    border: 1.5px solid rgba(239,68,68,0.4);
+}
+@keyframes verdictPulse-hold    { 0%,100% { box-shadow: 0 0 20px rgba(16,185,129,0.25); } 50% { box-shadow: 0 0 40px rgba(16,185,129,0.5); } }
+@keyframes verdictPulse-monitor { 0%,100% { box-shadow: 0 0 20px rgba(245,158,11,0.25); } 50% { box-shadow: 0 0 40px rgba(245,158,11,0.5); } }
+@keyframes verdictPulse-release { 0%,100% { box-shadow: 0 0 20px rgba(239,68,68,0.25);  } 50% { box-shadow: 0 0 40px rgba(239,68,68,0.5);  } }
+.verdict-banner.hold    { animation: verdictPulse-hold    2.5s ease-in-out infinite; }
+.verdict-banner.monitor { animation: verdictPulse-monitor 2.5s ease-in-out infinite; }
+.verdict-banner.release { animation: verdictPulse-release 2.5s ease-in-out infinite; }
+
+.verdict-inner { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.verdict-left { display: flex; align-items: center; gap: 1rem; }
+.verdict-icon { font-size: 2.5rem; line-height: 1; }
+.verdict-text { }
+.verdict-text .v-action { font-size: 1.4rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
+.verdict-text .v-sub    { font-size: 0.82rem; color: #94a3b8; margin-top: 2px; }
+.verdict-confidence { text-align: right; }
+.verdict-confidence .vc-label { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; }
+.verdict-confidence .vc-val   { font-family: 'JetBrains Mono', monospace; font-size: 2rem; font-weight: 700; display: block; }
+.hold    .verdict-text .v-action, .hold    .vc-val { color: #10b981; }
+.monitor .verdict-text .v-action, .monitor .vc-val { color: #f59e0b; }
+.release .verdict-text .v-action, .release .vc-val { color: #ef4444; }
+
+/* Row 2: KPI Cards */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+@media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 500px) { .kpi-grid { grid-template-columns: 1fr; } }
+.kpi-card {
+    background: rgba(15,22,41,0.9); border-radius: 14px; padding: 1.25rem;
+    border: 1px solid rgba(14,165,233,0.1); backdrop-filter: blur(12px);
+    border-left-width: 3px; transition: all 0.3s;
+}
+.kpi-card:hover { border-color: rgba(14,165,233,0.3); transform: translateY(-2px); }
+.kpi-card.k-safe    { border-left-color: #10b981; }
+.kpi-card.k-warning { border-left-color: #f59e0b; }
+.kpi-card.k-danger  { border-left-color: #ef4444; }
+.kpi-card.k-blue    { border-left-color: #0ea5e9; }
+.kpi-label { font-size: 0.7rem; color: #94a3b8; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.5rem; }
+.kpi-value { font-family: 'JetBrains Mono', monospace; font-size: 1.6rem; font-weight: 700; color: #f0f9ff; line-height: 1; }
+.kpi-unit  { font-size: 0.7rem; color: #94a3b8; }
+.kpi-badge { display: inline-block; margin-top: 0.5rem; padding: 2px 10px; border-radius: 999px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* Row 3: Charts */
+.charts-row { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; }
+@media (max-width: 900px) { .charts-row { grid-template-columns: 1fr; } }
+.chart-card {
+    background: rgba(15,22,41,0.9); border: 1px solid rgba(14,165,233,0.1);
+    border-radius: 14px; padding: 1.25rem; backdrop-filter: blur(12px);
+}
+.chart-card h3 { font-size: 0.85rem; font-weight: 600; color: #94a3b8; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 1rem; }
+.chart-wrap { position: relative; }
+.doughnut-center {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    text-align: center; pointer-events: none;
+}
+.doughnut-center .dc-val { font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; font-weight: 700; color: #f0f9ff; display: block; line-height: 1; }
+.doughnut-center .dc-label { font-size: 0.65rem; color: #94a3b8; }
+
+/* Row 4: Timeline */
+.timeline-card {
+    background: rgba(15,22,41,0.9); border: 1px solid rgba(14,165,233,0.1);
+    border-radius: 14px; padding: 1.25rem; backdrop-filter: blur(12px);
+}
+.timeline-card h3 { font-size: 0.85rem; font-weight: 600; color: #94a3b8; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 0.25rem; }
+.timeline-card p  { font-size: 0.72rem; color: #475569; margin-bottom: 1rem; font-style: italic; }
+
+/* Row 5: Flow Diagram */
+.flow-card {
+    background: rgba(15,22,41,0.9); border: 1px solid rgba(14,165,233,0.1);
+    border-radius: 14px; padding: 1.5rem; backdrop-filter: blur(12px);
+}
+.flow-card h3 { font-size: 0.85rem; font-weight: 600; color: #94a3b8; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 1.25rem; }
+.flow-diagram { display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
+.flow-node {
+    background: rgba(22,32,64,0.7); border: 1.5px solid #1e3a5f;
+    border-radius: 12px; padding: 1rem; text-align: center;
+    min-width: 90px;
+}
+.flow-node.dam-node {
+    background: rgba(14,165,233,0.1); border-color: #0ea5e9;
+    box-shadow: 0 0 20px rgba(14,165,233,0.2); min-width: 110px;
+}
+.flow-node .fn-icon { font-size: 1.5rem; display: block; margin-bottom: 4px; }
+.flow-node .fn-label { font-size: 0.72rem; color: #94a3b8; font-weight: 500; }
+.flow-node .fn-dam   { font-size: 0.78rem; color: #0ea5e9; font-weight: 700; }
+.flow-node .fn-pct   { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #94a3b8; }
+
+.flow-arrow { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.fa-line {
+    width: 60px; height: 2px; border-radius: 1px;
+    position: relative; overflow: hidden;
+}
+.fa-line::after {
+    content: ''; position: absolute; top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, currentColor, transparent);
+    animation: flowArrow 1.5s ease-in-out infinite;
+}
+@keyframes flowArrow { to { left: 100%; } }
+.fa-line.safe { background: rgba(16,185,129,0.3); color: #10b981; }
+.fa-line.warn { background: rgba(245,158,11,0.3); color: #f59e0b; }
+.fa-line.danger { background: rgba(239,68,68,0.3); color: #ef4444; }
+.fa-label { font-size: 0.65rem; color: #94a3b8; text-align: center; max-width: 80px; }
+
+/* Row 6: Accordion */
+.accordion-card {
+    background: rgba(15,22,41,0.9); border: 1px solid rgba(14,165,233,0.1);
+    border-radius: 14px; backdrop-filter: blur(12px); overflow: hidden;
+}
+.accordion-header {
+    padding: 1.25rem 1.5rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between;
+    transition: background 0.2s;
+}
+.accordion-header:hover { background: rgba(14,165,233,0.05); }
+.accordion-header h3 { font-size: 0.85rem; font-weight: 600; color: #94a3b8; letter-spacing: 0.06em; text-transform: uppercase; }
+.accordion-chevron { color: #94a3b8; transition: transform 0.3s; }
+.accordion-chevron.open { transform: rotate(180deg); }
+.accordion-body { display: none; padding: 0 1.5rem 1.25rem; border-top: 1px solid rgba(14,165,233,0.08); }
+.accordion-body.open { display: block; }
+.perf-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin-top: 1rem; }
+@media (max-width: 700px) { .perf-grid { grid-template-columns: repeat(2, 1fr); } }
+.perf-card {
+    background: rgba(10,15,30,0.6); border: 1px solid rgba(14,165,233,0.08);
+    border-radius: 10px; padding: 0.875rem; text-align: center;
+}
+.perf-card .pc-label { font-size: 0.65rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; }
+.perf-card .pc-val   { font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; font-weight: 700; color: #0ea5e9; display: block; margin-top: 2px; }
+.confusion-table th, .confusion-table td { padding: 0.5rem 1rem; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
+.confusion-table th { background: rgba(22,32,64,0.6); color: #94a3b8; font-size: 0.7rem; text-transform: uppercase; }
+.confusion-table td { border: 1px solid rgba(14,165,233,0.08); }
+.confusion-table tr:hover td { background: rgba(14,165,233,0.04); }
+
+/* Empty State */
+.empty-state { text-align: center; padding: 4rem 2rem; color: #475569; }
+.empty-state .es-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.6; }
+.empty-state p { font-size: 0.9rem; }
+{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-[#0f172a] via-[#1e3a8a] to-[#0ea5e9] flex flex-col items-center justify-center py-12 px-4 overflow-x-hidden">
+<div class="control-page">
+    <div class="control-grid">
 
-    <div class="glass-panel w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 items-start animate__animated animate__fadeIn">
+        <!-- ── LEFT PANEL ── -->
+        <div class="left-panel">
 
-        <!-- Left Section -->
-        <div class="glass-box p-8 rounded-2xl shadow-lg backdrop-blur-xl border border-white/30 text-gray-100 transition-transform duration-500 hover:-translate-y-1 hover:shadow-2xl">
+            <!-- Dam Info Card -->
+            <div class="panel-card fade-up">
+                <h2>⚙️ {{ dam_name_display|default:"Dam Control Center" }}</h2>
+                <p class="dam-region">{{ weather_data.region|default:"Tamil Nadu" }}</p>
 
-            <h1 class="text-3xl font-bold text-center mb-6 text-cyan-300 drop-shadow-md">⚙️ Dam Control Center</h1>
-
-            <div id="computationStatus" class="glass-subbox p-4 rounded-lg mb-6 font-semibold text-center text-cyan-300">
-                Status: <span id="statusText">Idle</span>
-                <div class="w-full bg-gray-700 rounded-full h-4 mt-2 overflow-hidden">
-                    <div id="progressBar" class="bg-cyan-400 h-4 w-0 transition-all duration-500"></div>
+                <!-- Status Progress -->
+                <div class="status-widget">
+                    <div class="status-label">
+                        <span>Computation Status</span>
+                        <span id="statusText" style="color:#0ea5e9;">Idle</span>
+                    </div>
+                    <div class="progress-track">
+                        <div class="progress-fill" id="progressBar" style="width:0%"></div>
+                    </div>
                 </div>
-            </div>
 
-            <form method="POST" id="computationForm" class="space-y-4 animate__animated animate__fadeInUp">
-                {% csrf_token %}
-                {{ form.as_p }}
-
-                <div class="flex space-x-4">
-                    <button type="submit" class="flex-grow py-3 rounded-xl font-semibold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 transition-all duration-300 shadow-lg hover:shadow-cyan-400/40">
-                        🚀 Run Computation
-                    </button>
-
-                    <button type="submit" name="reset" value="1" id="resetButton" class="flex-grow py-3 rounded-xl font-semibold bg-gray-500 hover:bg-gray-600 text-white transition-all duration-300 shadow-lg">
-                        🔄 Reset
-                    </button>
-                </div>
-            </form>
-
-            {% if result %}
-            <div class="mt-6 space-y-6 animate__animated animate__fadeInUp">
-                <div class="text-center text-cyan-200 font-medium text-lg">{{ result }}</div>
-
+                <!-- Weather Summary Strip -->
                 {% if weather_data %}
-                <div class="glass-subbox p-4 rounded-lg">
-                    <h3 class="text-xl font-semibold text-cyan-300 mb-2">🌦️ Weather Data Used</h3>
-                    <p class="text-gray-200">🌆 City: <span class="font-semibold text-black">{{ weather_data.city }}</span></p>
-                    <p class="text-gray-200">🌡️ Temp: <span class="text-black">{{ weather_data.temperature }}°C</span></p>
-                    <p class="text-gray-200">💧 Humidity: <span class="text-black">{{ weather_data.humidity }}%</span></p>
-                    <p class="text-gray-200">🌬️ Wind: <span class="text-black">{{ weather_data.wind_speed }} km/s</span></p>
+                <div class="weather-strip" style="margin-bottom:1.25rem;">
+                    <div class="weather-pill">
+                        <div class="wp-icon">🌡️</div>
+                        <span class="wp-val">{{ weather_data.temperature }}°</span>
+                        <span class="wp-label">Temp (°C)</span>
+                    </div>
+                    <div class="weather-pill">
+                        <div class="wp-icon">💧</div>
+                        <span class="wp-val">{{ weather_data.humidity }}%</span>
+                        <span class="wp-label">Humidity</span>
+                    </div>
+                    <div class="weather-pill">
+                        <div class="wp-icon">💨</div>
+                        <span class="wp-val">{{ weather_data.wind_speed }}</span>
+                        <span class="wp-label">Wind m/s</span>
+                    </div>
                 </div>
                 {% endif %}
 
-                {% if confusion_data %}
-                <div class="glass-subbox p-4 rounded-lg">
-                    <h3 class="text-lg font-semibold text-cyan-300">Confusion Matrix & Metrics</h3>
-                    <p class="text-gray-200">🎯 Accuracy: <span class="font-bold text-white">{{ confusion_data.accuracy }}</span></p>
-                    <p class="text-gray-200">TP: {{ confusion_data.TP }} | FN: {{ confusion_data.FN }} | FP: {{ confusion_data.FP }} | TN: {{ confusion_data.TN }}</p>
-                </div>
-                {% endif %}
-
-                {% if regression_metrics %}
-                <div class="glass-subbox p-4 rounded-lg">
-                    <h3 class="text-lg font-semibold text-cyan-300">📈 Regression Metrics</h3>
-                    <p class="text-gray-200">R²: <span class="text-white">{{ regression_metrics.r2 }}</span></p>
-                    <p class="text-gray-200">MAE: <span class="text-white">{{ regression_metrics.mae }}</span></p>
-                    <p class="text-gray-200">RMSE: <span class="text-white">{{ regression_metrics.rmse }}</span></p>
-                </div>
-                {% endif %}
+                <!-- Form -->
+                <form method="POST" id="computationForm" class="ctrl-form">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    <div style="display:flex; flex-direction:column; gap:0.5rem; margin-top:1rem;">
+                        <button type="submit" class="btn-run" id="runBtn">
+                            <span id="runBtnText">
+                                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                Run Prediction
+                            </span>
+                            <span id="runBtnSpinner" style="display:none;" class="spinner"></span>
+                        </button>
+                        <button type="submit" name="reset" value="1" id="resetButton" class="btn-reset">
+                            ↺ Reset
+                        </button>
+                    </div>
+                </form>
             </div>
-            {% endif %}
         </div>
 
-        <!-- Right Section -->
-        <div class="glass-box p-8 rounded-2xl shadow-lg backdrop-blur-xl border border-white/30 text-gray-100 transition-transform duration-500 hover:-translate-y-1 hover:shadow-2xl">
-            <h2 class="text-2xl font-semibold text-cyan-300 text-center mb-4 drop-shadow-md">📊 Model Insights</h2>
+        <!-- ── RIGHT RESULTS PANEL ── -->
+        <div class="results-area">
+
+            {% if result %}
+            <!-- Result text -->
+            <p style="font-size:0.82rem; color:#94a3b8; text-align:center;">{{ result }}</p>
+            {% endif %}
+
+            {% if prediction_details %}
+            <!-- ROW 1: VERDICT BANNER -->
+            <div class="verdict-banner {% if prediction_details.live_risk == 'Low' %}hold{% elif prediction_details.live_risk == 'Medium' %}monitor{% else %}release{% endif %} fade-up">
+                <div class="verdict-inner">
+                    <div class="verdict-left">
+                        <div class="verdict-icon">
+                            {% if prediction_details.live_risk == 'Low' %}✅
+                            {% elif prediction_details.live_risk == 'Medium' %}⚠️
+                            {% else %}🚨{% endif %}
+                        </div>
+                        <div class="verdict-text">
+                            <div class="v-action">
+                                {% if prediction_details.live_risk == 'Low' %}HOLD — Safe to receive inflow
+                                {% elif prediction_details.live_risk == 'Medium' %}MONITOR — Approach with caution
+                                {% else %}RELEASE — Immediate outflow required{% endif %}
+                            </div>
+                            <div class="v-sub">
+                                {% if prediction_details.live_risk == 'Low' %}Current storage within safe limits. Dam can accept inflow from neighbouring sources.
+                                {% elif prediction_details.live_risk == 'Medium' %}Storage approaching threshold. Monitor closely. Partial outflow may be needed within 24–48h.
+                                {% else %}Storage critically high. Immediate release to downstream or neighbouring dam recommended.{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="verdict-confidence">
+                        <span class="vc-label">Storage Level</span>
+                        <span class="vc-val">{{ prediction_details.storage_pct }}%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROW 2: KPI CARDS -->
+            <div class="kpi-grid fade-up delay-1">
+                <div class="kpi-card {% if prediction_details.storage_pct < 60 %}k-safe{% elif prediction_details.storage_pct < 85 %}k-warning{% else %}k-danger{% endif %}">
+                    <div class="kpi-label">Current Storage</div>
+                    <div class="kpi-value">{{ prediction_details.current_storage }}<span class="kpi-unit"> TMC</span></div>
+                </div>
+                <div class="kpi-card k-blue">
+                    <div class="kpi-label">Max Capacity</div>
+                    <div class="kpi-value">{{ prediction_details.capacity }}<span class="kpi-unit"> TMC</span></div>
+                </div>
+                <div class="kpi-card {% if prediction_details.storage_pct < 60 %}k-safe{% elif prediction_details.storage_pct < 85 %}k-warning{% else %}k-danger{% endif %}">
+                    <div class="kpi-label">Storage %</div>
+                    <div class="kpi-value">{{ prediction_details.storage_pct }}<span class="kpi-unit">%</span></div>
+                </div>
+                <div class="kpi-card {% if prediction_details.live_risk == 'Low' %}k-safe{% elif prediction_details.live_risk == 'Medium' %}k-warning{% else %}k-danger{% endif %}">
+                    <div class="kpi-label">Risk Level</div>
+                    <div class="kpi-value" style="font-size:1.1rem; line-height:1.4;">{{ prediction_details.live_risk }}</div>
+                    <span class="kpi-badge {% if prediction_details.live_risk == 'Low' %}badge-low{% elif prediction_details.live_risk == 'Medium' %}badge-medium{% else %}badge-high{% endif %}">
+                        {{ prediction_details.live_risk }}
+                    </span>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ROW 3: CHARTS (Feature Importance + Doughnut Gauge) -->
+            {% if feature_data or prediction_details %}
+            <div class="charts-row fade-up delay-2">
+                <div class="chart-card">
+                    <h3>Feature Importance</h3>
+                    <!-- FIX: position:relative + fixed px height are mandatory for Chart.js -->
+                    <div id="featureChartContainer" style="position:relative; width:100%; height:400px; min-height:400px; max-height:400px;">
+                        {% if feature_names_json %}
+                        <canvas id="featureImportanceChart"></canvas>
+                        {% else %}
+                        <div class="empty-state"><div class="es-icon">📊</div><p>Run computation to view</p></div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <h3>Storage Gauge</h3>
+                    <div class="chart-wrap" style="height:220px; position:relative;">
+                        {% if prediction_details %}
+                        <canvas id="storageGaugeChart" style="width:100%;height:100%;"></canvas>
+                        <div class="doughnut-center">
+                            <span class="dc-val">{{ prediction_details.storage_pct }}%</span>
+                            <span class="dc-label">Full</span>
+                        </div>
+                        {% else %}
+                        <div class="empty-state"><div class="es-icon">🌊</div><p>Run computation to view</p></div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
 
             <!-- Prediction Counts Chart -->
             {% if prediction_data %}
-            <div class="animate__animated animate__fadeInUp mb-6">
-                <canvas id="predictionChart" class="w-full h-80"></canvas>
+            <div class="chart-card fade-up delay-2">
+                <h3>Prediction Distribution</h3>
+                <div style="height:180px;">
+                    <canvas id="predictionChart" style="width:100%;height:100%;"></canvas>
+                </div>
             </div>
-            {% else %}
-            <div class="text-center text-gray-300 p-8">
-                <p>📊 Run computation to see prediction insights</p>
+            {% endif %}
+
+            <!-- ROW 4: TIMELINE CHART -->
+            {% if prediction_details and prediction_details.timeline %}
+            <div class="timeline-card fade-up delay-3">
+                <h3>7-Day Storage Projection</h3>
+                <p>Simulated forecast based on historical trends</p>
+                <div style="height:280px;">
+                    <canvas id="predictiveTimelineChart" style="width:100%;height:100%;"></canvas>
+                </div>
             </div>
             {% endif %}
 
-            <!-- Feature Importance Chart -->
-            {% if feature_data %}
-            <div class="animate__animated animate__fadeInUp">
-                <canvas id="featureImportanceChart" class="w-full h-72"></canvas>
-            </div>
-            {% else %}
-            <div class="text-center text-gray-300 p-8">
-                <p>📈 Run computation to see feature importance</p>
+            <!-- ROW 5: FLOW DIAGRAM -->
+            {% if prediction_details %}
+            <div class="flow-card fade-up delay-3">
+                <h3>Water Flow Direction</h3>
+                <div class="flow-diagram">
+                    <div class="flow-node">
+                        <span class="fn-icon">🏔️</span>
+                        <span class="fn-label">Neighbour<br>Source</span>
+                    </div>
+
+                    <div class="flow-arrow">
+                        {% if prediction_details.live_risk != 'High' %}
+                        <div class="fa-line {% if prediction_details.live_risk == 'Low' %}safe{% else %}warn{% endif %}"></div>
+                        {% endif %}
+                        <span class="fa-label" style="font-size:0.65rem; color:{% if prediction_details.live_risk == 'High' %}#ef4444{% elif prediction_details.live_risk == 'Medium' %}#f59e0b{% else %}#10b981{% endif %}">
+                            {% if prediction_details.live_risk == 'High' %}BLOCKED{% else %}→ Inflow{% endif %}
+                        </span>
+                    </div>
+
+                    <div class="flow-node dam-node">
+                        <span class="fn-icon">🏗️</span>
+                        <span class="fn-dam">{{ dam_name_display|default:"Dam" }}</span>
+                        <span class="fn-pct">{{ prediction_details.storage_pct }}%</span>
+                    </div>
+
+                    <div class="flow-arrow">
+                        <div class="fa-line {% if prediction_details.live_risk == 'High' %}danger{% elif prediction_details.live_risk == 'Medium' %}warn{% else %}safe{% endif %}"></div>
+                        <span class="fa-label" style="font-size:0.65rem; color:{% if prediction_details.live_risk == 'High' %}#ef4444{% elif prediction_details.live_risk == 'Medium' %}#f59e0b{% else %}#94a3b8{% endif %}">
+                            {% if prediction_details.live_risk == 'High' %}⚠ RELEASE{% elif prediction_details.live_risk == 'Medium' %}Partial out{% else %}Normal{% endif %}
+                        </span>
+                    </div>
+
+                    <div class="flow-node">
+                        <span class="fn-icon">🌊</span>
+                        <span class="fn-label">Downstream<br>River</span>
+                    </div>
+                </div>
             </div>
             {% endif %}
-        </div>
-    </div>
-</div>
 
-<style>
-.glass-panel {
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(12px);
-}
-.glass-box {
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(12px);
-    border-radius: 2rem;
-    box-shadow: 0 0 25px rgba(255, 255, 255, 0.15);
-    padding: 2rem;
-}
-.glass-subbox {
-    background: rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    margin-top: 1rem;
-    padding: 1rem;
-}
-</style>
+            <!-- ROW 6: MODEL PERFORMANCE ACCORDION -->
+            {% if confusion_data or regression_metrics %}
+            <div class="accordion-card fade-up delay-4">
+                <div class="accordion-header" onclick="toggleAccordion(this)">
+                    <h3>Model Performance Details</h3>
+                    <svg class="accordion-chevron" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                </div>
+                <div class="accordion-body">
+                    <div class="perf-grid">
+                        {% if confusion_data %}
+                        <div class="perf-card">
+                            <span class="pc-label">Accuracy</span>
+                            <span class="pc-val">{{ confusion_data.accuracy }}</span>
+                        </div>
+                        {% endif %}
+                        {% if regression_metrics %}
+                        <div class="perf-card">
+                            <span class="pc-label">R² Score</span>
+                            <span class="pc-val">{{ regression_metrics.r2 }}</span>
+                        </div>
+                        <div class="perf-card">
+                            <span class="pc-label">MAE</span>
+                            <span class="pc-val">{{ regression_metrics.mae }}</span>
+                        </div>
+                        <div class="perf-card">
+                            <span class="pc-label">RMSE</span>
+                            <span class="pc-val">{{ regression_metrics.rmse }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if confusion_data %}
+                    <div style="overflow-x:auto; margin-top:1rem;">
+                        <table class="confusion-table w-full" style="border-collapse:collapse;">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Pred Pos</th><th>Pred Neg</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <th style="background:rgba(22,32,64,0.6); color:#94a3b8; font-size:0.7rem; padding:0.5rem 1rem;">Act Pos</th>
+                                    <td>{{ confusion_data.TP }}</td>
+                                    <td>{{ confusion_data.FN }}</td>
+                                </tr>
+                                <tr>
+                                    <th style="background:rgba(22,32,64,0.6); color:#94a3b8; font-size:0.7rem; padding:0.5rem 1rem;">Act Neg</th>
+                                    <td>{{ confusion_data.FP }}</td>
+                                    <td>{{ confusion_data.TN }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+            <!-- Empty state if no results yet -->
+            {% if not result %}
+            <div class="empty-state fade-up">
+                <div class="es-icon">🛰️</div>
+                <p>Configure dam parameters on the left and run the prediction to see results here.</p>
+            </div>
+            {% endif %}
+
+        </div><!-- /results-area -->
+    </div><!-- /control-grid -->
+</div><!-- /control-page -->
+{% endblock %}
+
+{% block extra_scripts %}
 <script>
-    // Wait for DOM to be fully loaded
-    document.addEventListener('DOMContentLoaded', function() {
-        
-        // Form submission handler for progress bar
-        const form = document.getElementById('computationForm');
-        if (form) {
-            form.addEventListener('submit', function(e) {
-                // Only show progress for computation, not reset
-                if (!e.submitter || e.submitter.name !== 'reset') {
-                    simulateProgress();
+// Form handlers
+document.addEventListener('DOMContentLoaded', function() {
+
+    const form = document.getElementById('computationForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            if (!e.submitter || e.submitter.name !== 'reset') {
+                simulateProgress();
+                const runText = document.getElementById('runBtnText');
+                const runSpinner = document.getElementById('runBtnSpinner');
+                if (runText) runText.style.display = 'none';
+                if (runSpinner) runSpinner.style.display = 'inline-block';
+            }
+        });
+    }
+
+    function simulateProgress() {
+        let w = 0;
+        const bar = document.getElementById('progressBar');
+        const text = document.getElementById('statusText');
+        if (!bar || !text) return;
+        text.textContent = 'Analyzing...';
+        const iv = setInterval(() => {
+            if (w >= 95) { clearInterval(iv); text.textContent = 'Processing...'; }
+            else { w += 3; bar.style.width = w + '%'; }
+        }, 150);
+    }
+
+    // Accordion
+    window.toggleAccordion = function(header) {
+        const body = header.nextElementSibling;
+        const chev = header.querySelector('.accordion-chevron');
+        body.classList.toggle('open');
+        if (chev) chev.classList.toggle('open');
+    };
+
+    // Storage Gauge Doughnut
+    {% if prediction_details %}
+    try {
+        const gaugePct = {{ prediction_details.storage_pct|safe }};
+        const ctxGauge = document.getElementById('storageGaugeChart');
+        if (ctxGauge) {
+            const gaugeColor = gaugePct < 60 ? '#10b981' : gaugePct < 85 ? '#f59e0b' : '#ef4444';
+            new Chart(ctxGauge, {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [gaugePct, 100 - gaugePct],
+                        backgroundColor: [gaugeColor, 'rgba(30,58,95,0.4)'],
+                        borderColor: ['transparent', 'transparent'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    cutout: '72%',
+                    animation: { duration: 1500 },
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } }
                 }
             });
         }
+    } catch(e) { console.error('Gauge error', e); }
+    {% endif %}
 
-        // Reset button handler
-        const resetButton = document.getElementById('resetButton');
-        if (resetButton) {
-            resetButton.addEventListener('click', function(e) {
-                // Let the form submit naturally, but clear local state
-                const statusText = document.getElementById('statusText');
-                const progressBar = document.getElementById('progressBar');
-                if (statusText) statusText.textContent = "Resetting...";
-                if (progressBar) progressBar.style.width = '0%';
+    // Prediction Counts Chart
+    {% if prediction_data %}
+    try {
+        const predData = {{ prediction_data|safe }};
+        const ctxPred = document.getElementById('predictionChart');
+        if (ctxPred && predData) {
+            new Chart(ctxPred, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(predData),
+                    datasets: [{ label: 'Prediction Count', data: Object.values(predData),
+                        backgroundColor: 'rgba(14,165,233,0.4)', borderColor: '#0ea5e9',
+                        borderWidth: 1, borderRadius: 6 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, animation: { duration: 1200 },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { color: '#94a3b8' }, grid: { color: 'rgba(14,165,233,0.07)' } },
+                        x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
+                    },
+                    plugins: { legend: { labels: { color: '#94a3b8' } } }
+                }
             });
         }
+    } catch(e) { console.error('Prediction chart error', e); }
+    {% endif %}
 
-        // Progress bar simulation
-        function simulateProgress() {
-            let width = 0;
-            const progressBar = document.getElementById('progressBar');
-            const statusText = document.getElementById('statusText');
-            
-            if (!progressBar || !statusText) return;
-            
-            statusText.textContent = "Running Computation...";
-            
-            const interval = setInterval(() => {
-                if (width >= 100) {
-                    clearInterval(interval);
-                    statusText.textContent = "Computation Complete";
-                } else {
-                    width += 5;
-                    progressBar.style.width = width + '%';
+    // ── Feature Importance Chart ──
+    // Q1: canvas id = 'featureImportanceChart'
+    // Q2: variables = feature_names_json (array) + feature_importances_json (array)
+    // Q3: |safe filter applied to both
+    // Q4/Q5: console.log below confirms values
+    {% if feature_names_json %}
+    (function() {
+        var featureNames   = {{ feature_names_json|safe }};
+        var featureImports = {{ feature_importances_json|safe }};
+
+        console.log("Feature Names:  ", featureNames);
+        console.log("Feature Imports:", featureImports);
+
+        if (!featureNames || !featureImports || featureNames.length === 0 || featureImports.length === 0) {
+            var container = document.getElementById("featureChartContainer");
+            if (container) container.innerHTML = "<p style='color:#94a3b8;text-align:center;padding:40px;font-family:Inter,sans-serif;'>No feature data available.</p>";
+            return;
+        }
+
+        var existing = Chart.getChart("featureImportanceChart");
+        if (existing) existing.destroy();
+
+        var canvas = document.getElementById("featureImportanceChart");
+        if (!canvas) return;
+        var ctx = canvas.getContext("2d");
+
+        new Chart(ctx, {
+            type: "bar",
+            data: {
+                labels: featureNames,
+                datasets: [{
+                    label: "Importance Score",
+                    data: featureImports,
+                    backgroundColor: featureImports.map(function(v) {
+                        if (v > 0.25) return "rgba(239,68,68,0.85)";
+                        if (v > 0.10) return "rgba(251,191,36,0.85)";
+                        return "rgba(34,197,94,0.85)";
+                    }),
+                    borderRadius: 6,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 800 },
+                indexAxis: "y",
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(c) { return " " + (c.parsed.x * 100).toFixed(1) + "%"; }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: 1,
+                        ticks: { color: "#94a3b8", callback: function(v) { return (v * 100).toFixed(0) + "%"; } },
+                        grid: { color: "rgba(255,255,255,0.05)" }
+                    },
+                    y: {
+                        ticks: { color: "#e2e8f0", font: { size: 12 } },
+                        grid: { display: false }
+                    }
                 }
-            }, 200);
-        }
-
-        // Render Prediction Counts Bar Chart
-        {% if prediction_data %}
-        try {
-            const predictionData = {{ prediction_data|safe }};
-            const ctxPred = document.getElementById('predictionChart');
-            
-            if (ctxPred && predictionData) {
-                const predLabels = Object.keys(predictionData);
-                const predValues = Object.values(predictionData);
-                
-                new Chart(ctxPred, {
-                    type: 'bar',
-                    data: {
-                        labels: predLabels,
-                        datasets: [{
-                            label: 'Prediction Counts',
-                            data: predValues,
-                            backgroundColor: 'rgba(6, 182, 212, 0.5)',
-                            borderColor: 'rgba(6, 182, 212, 1)',
-                            borderWidth: 1,
-                            borderRadius: 6
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        animation: { duration: 1500 },
-                        scales: {
-                            y: { 
-                                beginAtZero: true, 
-                                ticks: { color: 'white' },
-                                grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                            },
-                            x: { 
-                                ticks: { color: 'white' },
-                                grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                            }
-                        },
-                        plugins: {
-                            legend: { labels: { color: 'white' } }
-                        }
-                    }
-                });
             }
-        } catch (error) {
-            console.error('Error rendering prediction chart:', error);
-            console.log('Prediction data:', {{ prediction_data|safe }});
-        }
-        {% endif %}
+        });
+    })();
+    {% endif %}
 
-        // Render Feature Importance Bar Chart
-        {% if feature_data %}
-        try {
-            const featureData = {{ feature_data|safe }};
-            const ctxFeat = document.getElementById('featureImportanceChart');
-            
-            if (ctxFeat && featureData) {
-                const featLabels = Object.keys(featureData);
-                const featValues = Object.values(featureData);
-                const total = featValues.reduce((a, b) => a + b, 0);
-                const percentages = featValues.map(v => ((v / total) * 100).toFixed(1));
-
-                // Generate gradient colors based on importance
-                const gradientColors = percentages.map(pct => 
-                    `rgba(14, 165, 233, ${0.4 + 0.6 * (pct / 100)})`
-                );
-
-                new Chart(ctxFeat, {
-                    type: 'bar',
-                    data: {
-                        labels: featLabels,
-                        datasets: [{
-                            label: 'Feature Importance (%)',
-                            data: percentages,
-                            backgroundColor: gradientColors,
-                            borderColor: '#0ea5e9',
-                            borderWidth: 1,
-                            borderRadius: 6
-                        }]
+    // Timeline Chart
+    {% if prediction_details and prediction_details.timeline %}
+    try {
+        const timelineData = {{ prediction_details.timeline|safe }};
+        const capacity = {{ prediction_details.capacity|safe }};
+        const ctxTl = document.getElementById('predictiveTimelineChart');
+        if (ctxTl) {
+            const safeLevel = capacity * 0.85;
+            new Chart(ctxTl, {
+                type: 'line',
+                data: {
+                    labels: ['Day 1','Day 2','Day 3','Day 4','Day 5','Day 6','Day 7'],
+                    datasets: [
+                        { label: 'Projected Storage (TMC)', data: timelineData,
+                          borderColor: '#0ea5e9', backgroundColor: 'rgba(14,165,233,0.1)',
+                          fill: true, tension: 0.35, borderWidth: 2.5, pointRadius: 5,
+                          pointBackgroundColor: '#0ea5e9', pointBorderColor: '#0a0f1e', pointBorderWidth: 2 },
+                        { label: 'Safe Threshold (85%)', data: Array(7).fill(safeLevel),
+                          borderColor: '#f59e0b', borderDash: [5,5], borderWidth: 1.5, pointRadius: 0 },
+                        { label: 'Max Capacity (100%)', data: Array(7).fill(capacity),
+                          borderColor: '#ef4444', borderDash: [10,5], borderWidth: 1.5, pointRadius: 0 }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, animation: { duration: 2000 },
+                    scales: {
+                        y: { beginAtZero: true, max: capacity * 1.1, ticks: { color: '#94a3b8' }, grid: { color: 'rgba(14,165,233,0.07)' } },
+                        x: { ticks: { color: '#94a3b8' }, grid: { display: false } }
                     },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        animation: { duration: 1500 },
-                        indexAxis: 'y',
-                        scales: {
-                            x: {
-                                beginAtZero: true,
-                                max: 100,
-                                ticks: {
-                                    color: 'white',
-                                    callback: val => val + '%'
-                                },
-                                grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                            },
-                            y: { 
-                                ticks: { color: 'white' },
-                                grid: { color: 'rgba(255, 255, 255, 0.1)' }
-                            }
-                        },
-                        plugins: {
-                            tooltip: {
-                                callbacks: {
-                                    label: context => `${context.dataset.label}: ${context.parsed.x}%`
-                                }
-                            },
-                            legend: { labels: { color: 'white' } }
-                        }
-                    }
-                });
-            }
-        } catch (error) {
-            console.error('Error rendering feature chart:', error);
-            console.log('Feature data:', {{ feature_data|safe }});
+                    plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } }
+                }
+            });
         }
-        {% endif %}
-    });
+    } catch(e) { console.error('Timeline chart error', e); }
+    {% endif %}
+});
 </script>
-
-<!-- Animate.css -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
-
 {% endblock %}

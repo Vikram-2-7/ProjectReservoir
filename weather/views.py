@@ -14,12 +14,43 @@ def home(request):
     return render(request, 'weather/home.html')
 def weather_info(request):
     return render(request, 'weather/weather_info.html')
+CITY_MAP = {
+    "poondi": {"display": "Poondi Dam", "city": "Tiruvallur", "region": "North Tamil Nadu"},
+    "red_hills": {"display": "Red Hills Dam", "city": "Chennai", "region": "North Tamil Nadu"},
+    "chembarambakkam": {"display": "Chembarambakkam Dam", "city": "Chennai", "region": "North Tamil Nadu"},
+    "krishnagiri": {"display": "Krishnagiri Dam", "city": "Krishnagiri", "region": "North Tamil Nadu"},
+    "mettur": {"display": "Mettur Dam", "city": "Salem", "region": "North Tamil Nadu"},
+    "amaravathi": {"display": "Amaravathi Dam", "city": "Udumalaipettai", "region": "Central Tamil Nadu"},
+    "bhavanisagar": {"display": "Bhavanisagar Dam", "city": "Sathyamangalam", "region": "Central Tamil Nadu"},
+    "pilloor": {"display": "Pilloor Dam", "city": "Mettupalayam", "region": "Central Tamil Nadu"},
+    "parambikulam": {"display": "Parambikulam Dam", "city": "Pollachi", "region": "Central Tamil Nadu"},
+    "aliyar": {"display": "Aliyar Dam", "city": "Pollachi", "region": "Central Tamil Nadu"},
+    "vaigai": {"display": "Vaigai Dam", "city": "Theni", "region": "South Tamil Nadu"},
+    "sathanur": {"display": "Sathanur Dam", "city": "Tiruvannamalai", "region": "South Tamil Nadu"},
+    "papanasam": {"display": "Papanasam Dam", "city": "Ambasamudram", "region": "South Tamil Nadu"},
+    "manimuthar": {"display": "Manimuthar Dam", "city": "Ambasamudram", "region": "South Tamil Nadu"},
+    "pechiparai": {"display": "Pechiparai Dam", "city": "Kanyakumari", "region": "South Tamil Nadu"},
+    "kodaikanal": {"display": "Kodaikanal Dam", "city": "Kodaikanal", "region": "South Tamil Nadu"},
+    "krishnapuram": {"display": "Krishnapuram Dam", "city": "Tirunelveli", "region": "South Tamil Nadu"}
+}
+
 def get_weather(request):
     weather_data = None
     error_message = None
     forecast_data = None
     if request.method == "POST":
-        city = request.POST.get("city")
+        dam_id = request.POST.get("city")
+        if dam_id in CITY_MAP:
+            dam_info = CITY_MAP[dam_id]
+            city = dam_info["city"]
+            dam_display = dam_info["display"]
+            region = dam_info["region"]
+        else:
+            city = dam_id
+            dam_id = "mettur"
+            dam_display = city
+            region = "Unknown Region"
+
         api_key_path = r"C:\Users\VIKRAM\OneDrive\Desktop\DESKTOPP (1)\SIH\weather_app\myproject\weather_factorAPI_KEY.txt"
         if not os.path.exists(api_key_path):
             error_message = "❌ API key file not found."
@@ -36,6 +67,9 @@ def get_weather(request):
 
                 if response_weather.status_code == 200 and weather.get("cod") == 200:
                     weather_data = {
+                        "dam_id": dam_id,
+                        "dam_display": dam_display,
+                        "region": region,
                         "city": weather["name"],
                         "country": weather.get("sys", {}).get("country", ""),
                         "temperature": weather["main"]["temp"],
@@ -50,6 +84,8 @@ def get_weather(request):
                         "uv_index": "N/A",  
                         "sunrise": weather.get("sys", {}).get("sunrise", "N/A"),
                         "sunset": weather.get("sys", {}).get("sunset", "N/A"),
+                        "latitude": weather["coord"]["lat"] if "coord" in weather else 0,
+                        "longitude": weather["coord"]["lon"] if "coord" in weather else 0,
                     }
                    
                     forecast_data = []
@@ -71,14 +107,24 @@ def get_weather(request):
 
                     request.session["weather_data"] = weather_data
                 else:
-                    error_message = "⚠️ Invalid city name."
+                    error_message = f"⚠️ Invalid dam mapping to city: {city}."
             except Exception as e:
                 error_message = f"Error fetching weather: {e}"
 
+    if request.method == "GET":
+        CITY_MAP_LIST = []
+        for d_id, d_info in CITY_MAP.items():
+            CITY_MAP_LIST.append({"id": d_id, "display": d_info["display"]})
+    else:
+        CITY_MAP_LIST = []
+        for d_id, d_info in CITY_MAP.items():
+            CITY_MAP_LIST.append({"id": d_id, "display": d_info["display"]})
+            
     return render(request, "weather/get_weather.html", {
         "weather": weather_data,
         "forecast": forecast_data,
         "error": error_message,
+        "city_map_list": CITY_MAP_LIST,
     })
 def dam_control(request):
     weather_data = request.session.get('weather_data', None)

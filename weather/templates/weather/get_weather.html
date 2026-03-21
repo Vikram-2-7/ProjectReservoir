@@ -1,69 +1,268 @@
 {% extends 'dam/base.html' %}
 
-{% block title %}🌤️ Weather Information{% endblock %}
+{% block title %}Monitor — Select Dam & Fetch Weather{% endblock %}
+
+{% block extra_styles %}
+.weather-page { max-width: 680px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+
+/* Form Card */
+.form-card {
+    background: rgba(15,22,41,0.9);
+    border: 1px solid rgba(14,165,233,0.15);
+    border-radius: 20px;
+    padding: 2.5rem;
+    backdrop-filter: blur(16px);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+}
+.form-header { text-align: center; margin-bottom: 2rem; }
+.form-header .header-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+.form-header h1 { font-size: 1.5rem; font-weight: 700; color: #f0f9ff; margin-bottom: 0.5rem; }
+.form-header p  { font-size: 0.85rem; color: #94a3b8; }
+
+/* Custom Select */
+.select-wrapper { position: relative; margin-bottom: 1.25rem; }
+.select-wrapper select {
+    width: 100%;
+    background: #0a0f1e;
+    border: 1.5px solid #1e3a5f;
+    border-radius: 10px;
+    color: #f0f9ff;
+    padding: 14px 44px 14px 16px;
+    font-size: 0.95rem;
+    font-family: 'Inter', sans-serif;
+    appearance: none;
+    cursor: pointer;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+.select-wrapper select:focus {
+    outline: none;
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 3px rgba(14,165,233,0.15);
+}
+.select-wrapper select option { background: #0f1629; color: #f0f9ff; }
+.select-chevron {
+    position: absolute; right: 14px; top: 50%;
+    transform: translateY(-50%); pointer-events: none;
+    color: #0ea5e9;
+}
+
+/* Submit Button */
+.btn-submit {
+    width: 100%;
+    background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+    color: white; font-weight: 700; font-size: 1rem;
+    padding: 14px 24px; border-radius: 10px; border: none;
+    cursor: pointer; display: flex; align-items: center;
+    justify-content: center; gap: 10px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 16px rgba(14,165,233,0.3);
+}
+.btn-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(14,165,233,0.5); filter: brightness(1.08); }
+.btn-submit.loading { opacity: 0.8; cursor: not-allowed; }
+
+/* Dam Info Banner */
+.dam-banner {
+    background: rgba(14,165,233,0.07);
+    border: 1px solid rgba(14,165,233,0.2);
+    border-radius: 12px; padding: 1.25rem 1.5rem; margin: 1.5rem 0;
+    border-left: 4px solid #0ea5e9;
+}
+.dam-banner h3 { font-size: 1.1rem; font-weight: 700; color: #0ea5e9; margin-bottom: 0.35rem; }
+.dam-banner p  { font-size: 0.82rem; color: #94a3b8; margin: 2px 0; }
+
+/* Go to Dam Button */
+.btn-dam-control {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+    color: white; font-weight: 700; font-size: 0.95rem;
+    padding: 13px 24px; border-radius: 10px;
+    text-decoration: none; transition: all 0.3s;
+    box-shadow: 0 4px 16px rgba(14,165,233,0.3);
+    width: 100%;
+}
+.btn-dam-control:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(14,165,233,0.5); }
+
+/* Weather Metric Grid */
+.weather-result-section { margin-top: 2rem; }
+.weather-result-section h2 { font-size: 1.25rem; font-weight: 700; color: #f0f9ff; margin-bottom: 1.25rem; text-align: center; }
+.metric-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 1rem; margin-bottom: 1.5rem;
+}
+@media (min-width: 500px) { .metric-grid { grid-template-columns: repeat(3, 1fr); } }
+.metric-card {
+    background: rgba(15,22,41,0.9);
+    border: 1px solid rgba(14,165,233,0.12);
+    border-radius: 14px; padding: 1.25rem 1rem;
+    text-align: center; backdrop-filter: blur(12px);
+    transition: all 0.3s ease;
+}
+.metric-card:hover { border-color: rgba(14,165,233,0.3); transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+.metric-icon { font-size: 1.5rem; margin-bottom: 0.5rem; display: block; }
+.metric-value { font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; font-weight: 700; color: #0ea5e9; display: block; line-height: 1.2; }
+.metric-unit  { font-size: 0.7rem; color: #94a3b8; }
+.metric-label { font-size: 0.72rem; color: #94a3b8; margin-top: 0.3rem; font-weight: 500; letter-spacing: 0.04em; display: block; }
+
+/* Forecast */
+.forecast-card {
+    background: rgba(15,22,41,0.9);
+    border: 1px solid rgba(14,165,233,0.1);
+    border-radius: 14px; padding: 1.5rem;
+    margin-top: 1.5rem; backdrop-filter: blur(12px);
+}
+.forecast-card h3 { font-size: 1rem; font-weight: 700; color: #f0f9ff; margin-bottom: 1rem; }
+.forecast-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.75rem; }
+.forecast-day {
+    background: rgba(22,32,64,0.6); border: 1px solid rgba(14,165,233,0.08);
+    border-radius: 10px; padding: 0.875rem; text-align: center;
+    transition: all 0.2s;
+}
+.forecast-day:hover { border-color: rgba(14,165,233,0.25); }
+.forecast-day .day-name { font-size: 0.75rem; font-weight: 600; color: #94a3b8; margin-bottom: 0.5rem; }
+.forecast-day .day-temp { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: #f0f9ff; }
+.forecast-day .day-desc { font-size: 0.7rem; color: #475569; margin-top: 0.25rem; }
+
+.error-msg { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 10px; padding: 1rem; color: #ef4444; font-size: 0.875rem; text-align: center; margin-top: 1rem; }
+{% endblock %}
 
 {% block content %}
+<div class="weather-page">
 
-<div class="pt-28 max-w-md mx-auto space-y-8 bg-white bg-opacity-20 backdrop-blur rounded-xl p-8 shadow-lg animate__animated animate__fadeInUp">
-
-    <form method="POST" class="space-y-6">
-        <center><b><h1> REPORT <h1><b><center>
-        {% csrf_token %}
-        <input 
-            type="text"
-            name="city"
-            placeholder="Enter city name"
-            required
-            class="w-full p-3 border border-gray-300 rounded-lg text-black placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
-        >
-        <button type="submit" class="w-full bg-cyan-500 text-white py-3 rounded-xl font-semibold hover:bg-cyan-400 transition">Get Weather</button>
-    </form>
-
-    {% if weather %}
-    <div class="bg-white bg-opacity-20 backdrop-blur rounded-xl p-6 shadow-lg text-gray-900 animate__animated animate__fadeInUp">
-        <h2 class="text-3xl font-semibold mb-6 text-cyan-600">{{ weather.city }}, {{ weather.country|default:"" }}</h2>
-        <div class="flex flex-col space-y-4">
-            <div class="flex items-center space-x-4">
-                <img src="https://openweathermap.org/img/wn/{{ weather.icon }}@2x.png" alt="weather icon" class="w-16 h-16"/>
-                <p class="text-xl font-semibold">{{ weather.description }}</p>
-            </div>
-            <p><strong>Temperature:</strong> {{ weather.temperature }}°C</p>
-            <p><strong>Feels Like:</strong> {{ weather.feels_like }}°C</p>
-            <p><strong>Humidity:</strong> {{ weather.humidity }}%</p>
-            <p><strong>Pressure:</strong> {{ weather.pressure }} hPa</p>
-            <p><strong>Wind Speed:</strong> {{ weather.wind_speed }} m/s</p>
-            <p><strong>Wind Direction:</strong> {{ weather.wind_deg }}°</p>
-            <p><strong>Visibility:</strong> {{ weather.visibility|default:"N/A" }} meters</p>
-            <p><strong>UV Index:</strong> {{ weather.uv_index|default:"N/A" }}</p>
-            <p><strong>Sunrise:</strong> {{ weather.sunrise|date:"H:i" }}</p>
-            <p><strong>Sunset:</strong> {{ weather.sunset|date:"H:i" }}</p>
+    <!-- Form Card -->
+    <div class="form-card fade-up">
+        <div class="form-header">
+            <div class="header-icon">🌦️</div>
+            <h1>Select Dam &amp; Fetch Weather</h1>
+            <p>Choose a Tamil Nadu dam to retrieve live meteorological data</p>
         </div>
+
+        <form method="POST" id="weatherForm">
+            {% csrf_token %}
+            <div class="select-wrapper">
+                <select name="city" required id="damSelect">
+                    <option value="" disabled selected>— Select a Dam —</option>
+                    <optgroup label="🔵 North Tamil Nadu">
+                        {% for dam in city_map_list %}{% if dam.region == 'North TN' %}
+                        <option value="{{ dam.id }}" {% if weather.dam_id == dam.id %}selected{% endif %}>{{ dam.display }}</option>
+                        {% endif %}{% endfor %}
+                    </optgroup>
+                    <optgroup label="🟢 Central Tamil Nadu">
+                        {% for dam in city_map_list %}{% if dam.region == 'Central TN' %}
+                        <option value="{{ dam.id }}" {% if weather.dam_id == dam.id %}selected{% endif %}>{{ dam.display }}</option>
+                        {% endif %}{% endfor %}
+                    </optgroup>
+                    <optgroup label="🟡 South Tamil Nadu">
+                        {% for dam in city_map_list %}{% if dam.region == 'South TN' %}
+                        <option value="{{ dam.id }}" {% if weather.dam_id == dam.id %}selected{% endif %}>{{ dam.display }}</option>
+                        {% endif %}{% endfor %}
+                    </optgroup>
+                    <!-- Fallback: list all dams without region filter -->
+                    {% if not city_map_list.0.region %}
+                        {% for dam in city_map_list %}
+                        <option value="{{ dam.id }}" {% if weather.dam_id == dam.id %}selected{% endif %}>{{ dam.display }}</option>
+                        {% endfor %}
+                    {% endif %}
+                </select>
+                <svg class="select-chevron" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+            </div>
+
+            <button type="submit" class="btn-submit" id="submitBtn">
+                <span id="btnText">
+                    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/></svg>
+                    Fetch Live Weather
+                </span>
+                <span id="btnSpinner" style="display:none;" class="spinner"></span>
+            </button>
+        </form>
     </div>
+
+    {% if error %}
+    <div class="error-msg fade-up delay-1">⚠️ {{ error }}</div>
     {% endif %}
 
+    {% if weather %}
+    <!-- Dam Banner -->
+    <div class="dam-banner fade-up delay-1">
+        <h3>{{ weather.dam_display }}</h3>
+        <p>📍 Region: {{ weather.region }}</p>
+        <p>🗺️ Weather mapped from nearest city: <strong style="color:#f0f9ff;">{{ weather.city }}</strong></p>
+    </div>
+
+    <!-- Live Weather Metrics -->
+    <div class="weather-result-section fade-up delay-2">
+        <h2>Live Weather Data — {{ weather.city }}</h2>
+        <div class="metric-grid">
+            <div class="metric-card">
+                <span class="metric-icon">🌡️</span>
+                <span class="metric-value">{{ weather.temperature }}<span class="metric-unit">°C</span></span>
+                <span class="metric-label">Temperature</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-icon">🤗</span>
+                <span class="metric-value">{{ weather.feels_like }}<span class="metric-unit">°C</span></span>
+                <span class="metric-label">Feels Like</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-icon">💧</span>
+                <span class="metric-value">{{ weather.humidity }}<span class="metric-unit">%</span></span>
+                <span class="metric-label">Humidity</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-icon">💨</span>
+                <span class="metric-value">{{ weather.wind_speed }}<span class="metric-unit">m/s</span></span>
+                <span class="metric-label">Wind Speed</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-icon">📊</span>
+                <span class="metric-value">{{ weather.pressure }}<span class="metric-unit">hPa</span></span>
+                <span class="metric-label">Pressure</span>
+            </div>
+            <div class="metric-card">
+                <span class="metric-icon">☁️</span>
+                <span class="metric-value" style="font-size:0.9rem; font-family: Inter, sans-serif;">{{ weather.description|capfirst }}</span>
+                <span class="metric-label">Conditions</span>
+            </div>
+        </div>
+
+        <!-- Proceed Button -->
+        <a href="{% url 'dam_control' %}" class="btn-dam-control">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+            Proceed to Dam Analysis
+        </a>
+    </div>
+
+    <!-- 5-Day Forecast -->
     {% if forecast %}
-    <div class="bg-white bg-opacity-20 backdrop-blur rounded-xl p-6 shadow-lg mt-8 animate__animated animate__fadeInUp">
-        <h3 class="text-xl font-semibold text-cyan-600 mb-4">5-Day Forecast</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-x-auto">
+    <div class="forecast-card fade-up delay-3">
+        <h3>📅 5-Day Forecast</h3>
+        <div class="forecast-grid">
             {% for day in forecast %}
-            <div class="p-4 bg-white bg-opacity-30 rounded-lg shadow flex flex-col items-center">
-                <p class="font-bold mb-2">{{ day.date|date:"D, M d" }}</p>
-                <img src="https://openweathermap.org/img/wn/{{ day.icon }}@2x.png" alt="forecast icon" class="w-12 h-12">
-                <p>{{ day.description }}</p>
-                <p class="mt-2"><strong>Min:</strong> {{ day.min_temp }}°C</p>
-                <p><strong>Max:</strong> {{ day.max_temp }}°C</p>
+            <div class="forecast-day">
+                <div class="day-name">{{ day.date|date:"D, M d" }}</div>
+                <img src="https://openweathermap.org/img/wn/{{ day.icon }}.png" alt="{{ day.description }}" style="width:40px; height:40px; margin: 0 auto 0.25rem;">
+                <div class="day-temp">{{ day.min_temp }}° — {{ day.max_temp }}°</div>
+                <div class="day-desc">{{ day.description|capfirst }}</div>
             </div>
             {% endfor %}
         </div>
     </div>
     {% endif %}
-
-    {% if error %}
-    <p class="text-red-500 text-center font-semibold animate__animated animate__fadeInUp">{{ error }}</p>
     {% endif %}
 
     {% if result %}
-    <p class="text-green-600 text-center font-semibold animate__animated animate__fadeInUp">{{ result }}</p>
+    <p style="margin-top:1rem; color:#10b981; text-align:center; font-size:0.9rem;">{{ result }}</p>
     {% endif %}
+
 </div>
+
+<script>
+document.getElementById('weatherForm').addEventListener('submit', function() {
+    const btn = document.getElementById('submitBtn');
+    const text = document.getElementById('btnText');
+    const spinner = document.getElementById('btnSpinner');
+    if (text) text.style.display = 'none';
+    if (spinner) spinner.style.display = 'inline-block';
+    if (btn) btn.classList.add('loading');
+});
+</script>
 {% endblock %}

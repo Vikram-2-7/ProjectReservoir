@@ -3,144 +3,408 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}BrookStream.Ai{% endblock %}</title>
+    <title>{% block title %}BrookStream.AI{% endblock %}</title>
+
+    <!-- Google Fonts: Inter + JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 
     <!-- TailwindCSS -->
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 
-    <!-- Animate.css -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
-
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- AOS (Animate On Scroll) -->
+    <!-- AOS -->
     <link href="https://cdn.jsdelivr.net/npm/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/aos@2.3.1/dist/aos.js"></script>
 
     <style>
-        /* Animated gradient background */
+        /* ─── Design Tokens ─── */
+        :root {
+            --bg-base:    #0a0f1e;
+            --bg-surface: #0f1629;
+            --bg-raised:  #162040;
+            --border:     #1e3a5f;
+            --accent-blue:#0ea5e9;
+            --accent-cyan:#06b6d4;
+            --safe:       #10b981;
+            --warning:    #f59e0b;
+            --danger:     #ef4444;
+            --text-primary:   #f0f9ff;
+            --text-secondary: #94a3b8;
+            --text-muted:     #475569;
+        }
+
+        /* ─── Base ─── */
+        *, *::before, *::after { box-sizing: border-box; }
+
+        html { scroll-behavior: smooth; }
+
         body {
-            background: linear-gradient(135deg, #0f172a, #1e3a8a, #0ea5e9);
-            background-size: 300% 300%;
-            animation: gradientShift 8s ease infinite;
-            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-base);
+            background-image:
+                linear-gradient(rgba(14,165,233,0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(14,165,233,0.04) 1px, transparent 1px);
+            background-size: 40px 40px;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
         }
-        @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+
+        /* ─── Navbar ─── */
+        .bs-nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+            background: rgba(10,15,30,0.92);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
         }
-        /* Frosted glass navbar and footer */
-        .glass-nav, .glass-footer {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+        .bs-nav::after {
+            content: '';
+            display: block;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-blue), transparent);
         }
-        .glass-footer {
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        .nav-inner {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
-        /* Nav links */
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            font-weight: 800;
+            font-size: 1.25rem;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+        }
+        .nav-logo svg { flex-shrink: 0; }
+        .nav-logo span { color: var(--accent-blue); }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
         .nav-link {
             position: relative;
-            color: rgba(0, 0, 0, 0.8);
+            font-size: 0.875rem;
             font-weight: 500;
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding-bottom: 4px;
             transition: color 0.3s ease;
         }
         .nav-link::after {
             content: '';
             position: absolute;
-            width: 0%;
-            height: 2px;
-            bottom: -3px;
-            left: 0;
-            background-color: #22d3ee;
+            bottom: 0; left: 0;
+            width: 0%; height: 2px;
+            background: var(--accent-blue);
             transition: width 0.3s ease;
         }
-        .nav-link:hover {
-            color: #22d3ee;
+        .nav-link:hover { color: var(--accent-blue); }
+        .nav-link:hover::after { width: 100%; }
+        .nav-link.active { color: var(--accent-blue); }
+        .nav-link.active::after { width: 100%; }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
         }
-        .nav-link:hover::after {
-            width: 100%;
+        .live-clock {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
         }
-        /* Footer glow */
-        footer p {
-            color: rgba(255, 255, 255, 0.7);
+        .status-dot {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--safe);
         }
-        /* Smooth fade between pages */
-        main {
-            animation: fadeIn 0.7s ease-in-out;
+        .status-dot::before {
+            content: '';
+            display: inline-block;
+            width: 8px; height: 8px;
+            background: var(--safe);
+            border-radius: 50%;
+            box-shadow: 0 0 0 0 rgba(16,185,129,0.6);
+            animation: statusPulse 2s ease-in-out infinite;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
+        @keyframes statusPulse {
+            0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.6); }
+            70%  { box-shadow: 0 0 0 6px rgba(16,185,129,0); }
+            100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+        }
+
+        /* Hamburger for mobile */
+        .nav-hamburger {
+            display: none;
+            flex-direction: column;
+            gap: 5px;
+            cursor: pointer;
+            padding: 4px;
+        }
+        .nav-hamburger span {
+            display: block;
+            width: 22px; height: 2px;
+            background: var(--text-secondary);
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+        .mobile-menu {
+            display: none;
+            flex-direction: column;
+            gap: 0;
+            background: rgba(10,15,30,0.97);
+            border-top: 1px solid var(--border);
+            padding: 0.5rem 0;
+        }
+        .mobile-menu a {
+            padding: 0.75rem 2rem;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            border-left: 3px solid transparent;
+            transition: all 0.2s;
+        }
+        .mobile-menu a:hover {
+            color: var(--accent-blue);
+            border-left-color: var(--accent-blue);
+            background: rgba(14,165,233,0.05);
+        }
+
+        /* ─── Main Content ─── */
+        main.page-content {
+            flex-grow: 1;
+            padding-top: 80px;
+        }
+
+        /* ─── Footer ─── */
+        .bs-footer {
+            background: var(--bg-surface);
+            border-top: 1px solid var(--border);
+            padding: 1.5rem 2rem;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .bs-footer strong { color: var(--accent-blue); font-weight: 600; }
+
+        /* ─── Global Component Styles ─── */
+        .bs-card {
+            background: rgba(15,22,41,0.85);
+            border: 1px solid rgba(14,165,233,0.12);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+            backdrop-filter: blur(12px);
+            transition: all 0.3s ease;
+        }
+        .bs-card:hover {
+            border-color: rgba(14,165,233,0.25);
+            box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+            transform: translateY(-2px);
+        }
+
+        .badge-low    { background:#064e3b; color:#10b981; border:1px solid #10b981; border-radius:999px; padding:3px 12px; font-size:0.7rem; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; }
+        .badge-medium { background:#451a03; color:#f59e0b; border:1px solid #f59e0b; border-radius:999px; padding:3px 12px; font-size:0.7rem; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; }
+        .badge-high   { background:#450a0a; color:#ef4444; border:1px solid #ef4444; border-radius:999px; padding:3px 12px; font-size:0.7rem; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; }
+
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(14,165,233,0.4);
+            filter: brightness(1.1);
+        }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: transparent;
+            color: var(--accent-blue);
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 11px 24px;
+            border-radius: 8px;
+            border: 1.5px solid var(--accent-blue);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+        .btn-secondary:hover {
+            background: rgba(14,165,233,0.1);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(14,165,233,0.2);
+        }
+
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* ─── Page Load Animation ─── */
+        .fade-up {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeUp 0.5s ease forwards;
+        }
+        @keyframes fadeUp {
             to { opacity: 1; transform: translateY(0); }
         }
-        /* Ensure input text always black and visible in all states (autofill/focus) */
-        input.text-black,
-        input.text-black:focus,
-        input.text-black:-webkit-autofill,
-        input.text-black:-webkit-autofill:focus,
-        input.text-black:-webkit-autofill:hover,
-        input.text-black:autofill,
-        input.text-black:autofill:focus {
-            color: #111827 !important; /* Tailwind's black */
-            background-color: #fff !important;
-            -webkit-text-fill-color: #111827 !important;
-            caret-color: #111827 !important;
-            transition: background-color 5000s ease-in-out 0s;
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.2s; }
+        .delay-3 { animation-delay: 0.3s; }
+        .delay-4 { animation-delay: 0.4s; }
+
+        /* ─── Spinner ─── */
+        .spinner {
+            width: 18px; height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            display: inline-block;
         }
-        input::placeholder {
-            color: #6b7280 !important; /* Tailwind's gray-600 */
-            opacity: 1;
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 768px) {
+            .nav-links, .nav-right { display: none; }
+            .nav-hamburger { display: flex; }
+            .mobile-menu.open { display: flex; }
         }
+        @media (max-width: 640px) {
+            .bs-card { padding: 16px; }
+        }
+
+        {% block extra_styles %}{% endblock %}
     </style>
 </head>
+<body>
 
-<body class="min-h-screen flex flex-col text-white overflow-x-hidden">
+<!-- ─── Navbar ─── -->
+<nav class="bs-nav">
+    <div class="nav-inner">
+        <!-- Logo -->
+        <a href="{% url 'home' %}" class="nav-logo">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M14 2C14 2 6 10 6 16C6 20.4 9.6 24 14 24C18.4 24 22 20.4 22 16C22 10 14 2 14 2Z" fill="url(#dropGrad)"/>
+                <path d="M10 18C10 18 12 16 14 18C16 20 18 18 18 18" stroke="rgba(255,255,255,0.6)" stroke-width="1.5" stroke-linecap="round"/>
+                <defs>
+                    <linearGradient id="dropGrad" x1="14" y1="2" x2="14" y2="24" gradientUnits="userSpaceOnUse">
+                        <stop offset="0%" stop-color="#0ea5e9"/>
+                        <stop offset="100%" stop-color="#06b6d4"/>
+                    </linearGradient>
+                </defs>
+            </svg>
+            Brook<span>Stream</span>.AI
+        </a>
 
-    <!-- Navbar -->
-    <nav class="glass-nav fixed w-full top-0 left-0 z-50 shadow-md animate__animated animate__fadeInDown">
-        <div class="container mx-auto flex justify-between items-center py-4 px-8">
-            <h1 class="text-2xl font-bold text-cyan-300 tracking-wide flex items-center gap-2">
-                🌊 BrookStream.Ai
-            </h1>
-            <div class="flex space-x-6 text-sm md:text-base">
-                <a href="{% url 'home' %}" class="nav-link">Home</a>
-                <a href="{% url 'get_weather' %}" class="nav-link">Weather</a>
-                <a href="{% url 'dam_control' %}" class="nav-link">Dam Control</a>
-                <a href="{% url 'hydroalert' %}" class="nav-link">Hydro Alert</a>
-            </div>
+        <!-- Desktop Nav Links -->
+        <div class="nav-links">
+            <a href="{% url 'home' %}"         class="nav-link">Dashboard</a>
+            <a href="{% url 'get_weather' %}"  class="nav-link">Monitor</a>
+            <a href="{% url 'dam_control' %}"  class="nav-link">Dam Control</a>
+            <a href="{% url 'hydroalert' %}"   class="nav-link">Hydro Alert</a>
         </div>
-    </nav>
 
-    <!-- Main Content -->
-    <main class="flex-grow pt-24 pb-12 container mx-auto px-4" data-aos="fade-up">
-        {% block content %}
-            <!-- Example form to show input style -->
-            <form method="post" class="max-w-md mx-auto mb-12 bg-white bg-opacity-20 backdrop-blur rounded-xl p-8 shadow-lg">
-                {% csrf_token %}
-                <input 
-                    type="text"
-                    name="city"
-                    placeholder="Enter city name"
-                    required
-                    class="mt-2 mb-4 w-full p-3 border border-gray-300 rounded-lg text-black bg-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
-                >
-                <button type="submit" class="w-full bg-cyan-500 text-white py-2 rounded-lg font-semibold hover:bg-cyan-400 transition">Get Weather</button>
-            </form>
-        {% endblock %}
-    </main>
+        <!-- Right: Clock + Status -->
+        <div class="nav-right">
+            <span class="live-clock" id="navClock">--:--:--</span>
+            <span class="status-dot">System Online</span>
+        </div>
 
-    <!-- Footer -->
-    <footer class="glass-footer py-6 text-center animate__animated animate__fadeInUp">
-        <p class="text-sm md:text-base">
-            © 2025 <span class="text-cyan-300 font-semibold">BrookStream.Ai</span> — Intelligent Hydro Management System
-        </p>
-    </footer>
+        <!-- Mobile Hamburger -->
+        <div class="nav-hamburger" onclick="toggleMobileMenu(this)" id="hamburgerBtn">
+            <span></span><span></span><span></span>
+        </div>
+    </div>
 
-    <script>
-        AOS.init({ duration: 1000, once: true });
-    </script>
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobileMenu">
+        <a href="{% url 'home' %}">Dashboard</a>
+        <a href="{% url 'get_weather' %}">Monitor</a>
+        <a href="{% url 'dam_control' %}">Dam Control</a>
+        <a href="{% url 'hydroalert' %}">Hydro Alert</a>
+    </div>
+</nav>
+
+<!-- ─── Main Content ─── -->
+<main class="page-content">
+    {% block content %}{% endblock %}
+</main>
+
+<!-- ─── Footer ─── -->
+<footer class="bs-footer">
+    <strong>BrookStream.AI</strong> &copy; 2024 &nbsp;|&nbsp; Tamil Nadu Dam Monitoring &amp; Flood Prediction System
+</footer>
+
+<script>
+// Live Clock
+function updateClock() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    const s = String(now.getSeconds()).padStart(2, '0');
+    const el = document.getElementById('navClock');
+    if (el) el.textContent = `${h}:${m}:${s}`;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// Mobile menu toggle
+function toggleMobileMenu(btn) {
+    const menu = document.getElementById('mobileMenu');
+    menu.classList.toggle('open');
+}
+
+// Active nav link highlight
+(function() {
+    const path = window.location.pathname;
+    document.querySelectorAll('.nav-link, .mobile-menu a').forEach(link => {
+        if (link.getAttribute('href') === path ||
+            (path.startsWith(link.getAttribute('href')) && link.getAttribute('href') !== '/')) {
+            link.classList.add('active');
+        }
+    });
+})();
+
+// AOS Init
+AOS.init({ duration: 700, once: true, easing: 'ease-out-cubic' });
+</script>
+
+{% block extra_scripts %}{% endblock %}
+
 </body>
 </html>
