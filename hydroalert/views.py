@@ -1,5 +1,7 @@
 from django.shortcuts import render
+from django.conf import settings
 import pandas as pd
+import os
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
@@ -19,7 +21,10 @@ def hydroalert(request):
     low_inflow_threshold = 50
 
     try:
-        df = pd.read_csv(r"C:\Users\VIKRAM\OneDrive\Desktop\DESKTOPP (1)\SIH\weather_app\myproject\weather_project\dam\\threegorges-water-storage.csv")
+        csv_path = os.path.join(
+            settings.BASE_DIR, "dam", "threegorges-water-storage.csv"
+        )
+        df = pd.read_csv(csv_path)
 
         # Check required columns
         if 'measurement_date' not in df.columns or 'upstream_water_level' not in df.columns:

@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect
+from django.conf import settings
 import requests, os
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
@@ -51,11 +52,11 @@ def get_weather(request):
             dam_display = city
             region = "Unknown Region"
 
-        api_key_path = r"C:\Users\VIKRAM\OneDrive\Desktop\DESKTOPP (1)\SIH\weather_app\myproject\weather_factorAPI_KEY.txt"
-        if not os.path.exists(api_key_path):
-            error_message = "❌ API key file not found."
+        api_key = os.environ.get("OPENWEATHER_API_KEY", "")
+        if not api_key:
+            error_message = "❌ OpenWeather API key not found in environment."
         else:
-            API_KEY = open(api_key_path).read().strip()
+            API_KEY = api_key
             url_weather = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
             url_forecast = f"https://api.openweathermap.org/data/2.5/forecast?q={city}&appid={API_KEY}&units=metric"
 
@@ -205,7 +206,10 @@ def hydroalert(request):
         return "Normal"
 
     try:
-        df = pd.read_csv(r"C:\Users\VIKRAM\OneDrive\Desktop\DESKTOPP (1)\SIH\weather_app\myproject\weather_project\dam\\threegorges-water-storage.csv")
+        csv_path = os.path.join(
+            settings.BASE_DIR, "dam", "threegorges-water-storage.csv"
+        )
+        df = pd.read_csv(csv_path)
 
         if 'measurement_date' not in df.columns or 'upstream_water_level' not in df.columns:
             raise ValueError("Dataset must contain 'measurement_date' and 'upstream_water_level' columns.")

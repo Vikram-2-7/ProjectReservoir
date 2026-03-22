@@ -10,23 +10,29 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
-from pathlib import Path
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv()
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get("SECRET_KEY", "django-insecure-qx39xgc!fpe9nde-(d3@p%ytn7q(@ev7v-y#9vap^!xc#5rm^m")
+SECRET_KEY = os.environ.get(
+  "SECRET_KEY",
+  "django-insecure-local-dev-key-replace-in-prod"
+)
 
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "127.0.0.1,localhost").replace(" ", "").split(",")
-if not any(ALLOWED_HOSTS) or ALLOWED_HOSTS == [""]:
-    ALLOWED_HOSTS = ["127.0.0.1", "localhost", "*"]
+ALLOWED_HOSTS = [
+  "localhost",
+  "127.0.0.1",
+  ".railway.app",
+  ".up.railway.app",
+]
+extra = os.environ.get("ALLOWED_HOSTS", "")
+if extra:
+  ALLOWED_HOSTS += extra.split(",")
 
 
 # Application definition
@@ -75,13 +81,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'weather_project.wsgi.application'
 
-# Database
-# https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),  # Use os.path.join
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
 
@@ -111,15 +114,17 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.0/howto/static-files/
-
-STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
-]
-STATIC_URL = '/static/'
+STATIC_URL = "/static/"
 STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+_static_dir = os.path.join(BASE_DIR, "static")
+STATICFILES_DIRS = (
+    [_static_dir] if os.path.exists(_static_dir) else []
+)
+
+STATICFILES_STORAGE = (
+    "whitenoise.storage.CompressedManifestStaticFilesStorage"
+)
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
