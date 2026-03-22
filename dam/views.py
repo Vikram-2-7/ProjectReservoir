@@ -216,6 +216,10 @@ def dam_control(request):
                 "next_storage": float(round(live_next_storage, 2)),
                 "capacity": float(capacity),
                 "storage_pct": round(min(100, (current_storage / capacity) * 100)) if capacity > 0 else 0,
+                "rainfall_mm": float(round(latest_row["rainfall_mm"], 2)),
+                "temperature_c": float(round(latest_row["temperature_c"], 1)),
+                "humidity_percent": float(round(latest_row["humidity_percent"], 1)),
+                "dam_id": dam_name,
                 "timeline": timeline
             }
 
