@@ -1,6 +1,6 @@
 import pandas as pd
 
-# Dummy function for fetching dam data based on name (replace with actual logic)
+# Sample function for fetching dam data based on name (replace with actual logic)
 def fetch_dam_data(dam_name):
     # Sample data
     df_main = pd.DataFrame({

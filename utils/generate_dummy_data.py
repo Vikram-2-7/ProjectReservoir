@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 
-def create_dummy_data():
+def create_sample_data():
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     data_dir = os.path.join(base_dir, 'dam', 'data', 'dams')
     os.makedirs(data_dir, exist_ok=True)
@@ -119,4 +119,4 @@ def create_dummy_data():
 
 
 if __name__ == "__main__":
-    create_dummy_data()
+    create_sample_data()

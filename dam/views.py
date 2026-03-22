@@ -224,7 +224,7 @@ def dam_control(request):
             }
 
             elapsed_time = round(time.time() - start_time, 2)
-            result_text = f"Trained on: {dam_name}.csv (dummy simulation data). Computation completed in {elapsed_time}s."
+            result_text = f"Trained on: {dam_name}.csv (simulated data). Computation completed in {elapsed_time}s."
 
         except Exception as ex:
             result_text = f"Error during computation: {ex}"
