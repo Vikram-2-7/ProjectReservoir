@@ -28,11 +28,10 @@ def get_weather(request):
 
     if request.method == "POST":
         city = request.POST.get("city")
-        api_key_path = r"C:\Users\VIKRAM\OneDrive\Desktop\DESKTOPP (1)\SIH\weather_app\myproject\weather_factorAPI_KEY.txt"
-        if not os.path.exists(api_key_path):
-            error_message = "❌ API key file not found."
+        API_KEY = os.environ.get("OPENWEATHER_API_KEY", "")
+        if not API_KEY:
+            error_message = "❌ OpenWeather API key not found in environment."
         else:
-            API_KEY = open(api_key_path).read().strip()
             url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
             try:
                 response = requests.get(url, timeout=5)
@@ -98,7 +97,8 @@ def dam_control(request):
     if weather_data and "dam_id" in weather_data:
         dam_name = weather_data["dam_id"]
         
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    from django.conf import settings
+    base_dir = settings.BASE_DIR
     csv_file_path = os.path.join(base_dir, 'dam', 'data', 'dams', f"{dam_name}.csv")
 
     if request.method == "POST" and "reset" not in request.POST:

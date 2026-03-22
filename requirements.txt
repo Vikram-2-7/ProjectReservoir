@@ -1,0 +1,10 @@
+django>=5.0.7
+gunicorn
+scikit-learn
+pandas
+numpy
+requests
+whitenoise
+python-dotenv
+psycopg2-binary
+plotly

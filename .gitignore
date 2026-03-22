@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+db.sqlite3
+.DS_Store
+/staticfiles/
+# Do NOT ignore CSV files as they are part of the dam data
+# *.csv
